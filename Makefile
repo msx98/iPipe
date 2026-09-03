@@ -111,9 +111,11 @@ help:
 
 # Rasterize the app icon (assets/icon.svg) into the asset catalog. Zero
 # external deps: tools/render_icon.py uses only the Python standard library.
-icon:
-	@rm -f $(ICON_PNG)
-	python3 tools/render_icon.py $(ICON_SRC) $(ICON_PNG)
+$(ICON_PNG): $(ICON_SRC)
+	qlmanage -t -s 1024 -o assets $(ICON_SRC)
+	mv $(ICON_SRC).png $(ICON_PNG)
+
+icon: $(ICON_PNG)
 
 # Build only when the working tree differs from HEAD (or no staged app
 # exists yet, or BUNDLE_ID changed since the last build); then commit that
