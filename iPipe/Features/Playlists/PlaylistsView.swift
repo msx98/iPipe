@@ -286,22 +286,30 @@ struct PlaylistDetailScreen: View {
             }
             Section {
                 ForEach(Array(playlist.streams.enumerated()), id: \.element.id) { index, item in
-                    Button {
-                        app.playlistsPath.append(item.stream)
-                        Task { await model.playItem(at: index, app: app) }
-                    } label: {
-                        streamRow(item.stream)
+                    HStack(spacing: 12) {
+                        Button {
+                            model.pendingDeleteItem = item
+                            model.removeItemDialogPresented = true
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.title3)
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Remove \(item.stream.title)")
+
+                        Button {
+                            app.playlistsPath.append(item.stream)
+                            Task { await model.playItem(at: index, app: app) }
+                        } label: {
+                            streamRow(item.stream)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                     .listRowInsets(EdgeInsets())
                 }
                 .onMove { offsets, destination in
                     app.playlists.moveItem(from: offsets, to: destination, in: playlist)
-                }
-                .onDelete { offsets in
-                    let items = offsets.map { playlist.streams[$0] }
-                    model.pendingDeleteItem = items.first
-                    model.removeItemDialogPresented = true
                 }
             }
         }
@@ -363,7 +371,6 @@ struct PlaylistDetailScreen: View {
             Spacer(minLength: 0)
         }
         .contentShape(Rectangle())
-        .padding(.leading, 16)
         .padding(.trailing, 8)
     }
 
