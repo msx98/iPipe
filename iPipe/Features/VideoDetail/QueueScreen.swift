@@ -17,8 +17,7 @@ struct QueueScreen: View {
                 duration: app.player.currentDuration,
                 isPlaying: app.player.isPlaying,
                 hasQueue: !app.player.queue.isEmpty,
-                hasActiveVideo: app.player.hasItem,
-                isLast: app.player.queueIndex >= max(0, app.player.queue.count - 1)
+                hasActiveVideo: app.player.hasItem
             )
         }
         .background(Color(.systemBackground))
@@ -87,7 +86,6 @@ private struct PlaybackControlsBar: View {
     let isPlaying: Bool
     let hasQueue: Bool
     let hasActiveVideo: Bool
-    let isLast: Bool
 
     var body: some View {
         VStack(spacing: 10) {
@@ -110,15 +108,7 @@ private struct PlaybackControlsBar: View {
                 }
                 .disabled(!hasActiveVideo)
                 .buttonStyle(.plain)
-
-                Button {
-                    app.player.playNext()
-                } label: {
-                    Image(systemName: "forward.end.fill")
-                        .font(.title2)
-                }
-                .disabled(!hasQueue)
-                .buttonStyle(.plain)
+                .accessibilityLabel("Previous")
 
                 Button {
                     app.player.skipBackward()
@@ -128,6 +118,7 @@ private struct PlaybackControlsBar: View {
                 }
                 .disabled(!hasActiveVideo)
                 .buttonStyle(.plain)
+                .accessibilityLabel("Back 10 seconds")
 
                 Button {
                     app.player.togglePlayPause()
@@ -146,15 +137,17 @@ private struct PlaybackControlsBar: View {
                 }
                 .disabled(!hasActiveVideo)
                 .buttonStyle(.plain)
+                .accessibilityLabel("Forward 10 seconds")
 
                 Button {
-                    app.player.playFromQueue(at: app.player.queueIndex)
+                    app.player.playNext()
                 } label: {
-                    Image(systemName: isLast ? "arrow.clockwise" : "arrow.right.to.line")
+                    Image(systemName: "forward.end.fill")
                         .font(.title2)
                 }
-                .disabled(hasQueue && !hasActiveVideo)
+                .disabled(!hasQueue)
                 .buttonStyle(.plain)
+                .accessibilityLabel("Next")
             }
         }
         .padding(.horizontal, 16)
