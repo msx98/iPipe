@@ -1,0 +1,62 @@
+name: Build unsigned iOS IPA
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: build-ipa-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: xcodebuild -version
+
+      - name: Build unsigned iPipe.app
+        run: |
+          xcodebuild \
+            -project iPipe.xcodeproj \
+            -scheme iPipe \
+            -configuration Release \
+            -derivedDataPath build/DerivedData \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM=A1111ABCDE \
+            TEAM_ID=A1111ABCDE \
+            PRODUCT_BUNDLE_IDENTIFIER=ax.lx.ipipe \
+            build
+
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p build/ipa/Payload
+          cp -R build/DerivedData/Build/Products/Release-iphoneos/iPipe.app build/ipa/Payload/
+          cd build/ipa
+          zip -qry ../../iPipe-unsigned.ipa Payload
+          cd ../..
+          ls -lh iPipe-unsigned.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iPipe-unsigned
+          path: iPipe-unsigned.ipa
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: iPipe-unsigned.ipa
+          generate_release_notes: true
