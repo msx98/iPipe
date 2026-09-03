@@ -86,7 +86,10 @@ COOKIESFILE ?=
 # devices over the house_arrest/AFC service).
 PMD_PYTHON ?= $(shell for p in $(HOME)/.venv/bin/python $(HOME)/.venv/bin/python3 python3; do "$$p" -c 'import pymobiledevice3' >/dev/null 2>&1 && { echo "$$p"; break; }; done)
 
-.PHONY: help build signed install launch release clean
+ICON_SRC := assets/icon.svg
+ICON_PNG := iPipe/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+
+.PHONY: help build signed install launch release clean icon
 
 help:
 	@echo "Targets:"
@@ -103,7 +106,14 @@ help:
 ## release  — tag the current commit (default v<short-sha>, override with
 ##            RELEASE_TAG=<name>) and push it; the CI workflow builds the tag
 ##            and publishes the GitHub Release with the IPA
+## icon     — render assets/icon.svg into AppIcon.png (also runs before build)
 ## clean    — remove build/
+
+# Rasterize the app icon (assets/icon.svg) into the asset catalog. Zero
+# external deps: tools/render_icon.py uses only the Python standard library.
+icon:
+	@rm -f $(ICON_PNG)
+	python3 tools/render_icon.py $(ICON_SRC) $(ICON_PNG)
 
 # Build only when the working tree differs from HEAD (or no staged app
 # exists yet, or BUNDLE_ID changed since the last build); then commit that
@@ -112,7 +122,7 @@ help:
 # set -e guards every step: a failed toolchain must abort BEFORE
 # xcodebuild/staging/git commit, otherwise a broken tree gets committed and
 # future builds silently reuse it.
-build:
+build: icon
 	@set -e; \
 	stored_bid="$$(cat "$(APPROOT)/.bundle_id" 2>/dev/null || true)"; \
 	if [ -n "$$(git status --porcelain)" ] || [ ! -d "$(APP_PATH)" ] || [ "$$stored_bid" != "$(BUNDLE_ID)" ]; then \
