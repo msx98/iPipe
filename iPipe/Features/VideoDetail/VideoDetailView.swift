@@ -65,25 +65,10 @@ struct VideoDetailView: View {
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    downloadMenuItem(kind: .video)
-                    downloadMenuItem(kind: .audio)
-                } label: {
-                    Image(systemName: "arrow.down.circle")
-                }
-            }
-            ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showQueue = true
                 } label: {
                     Image(systemName: "list.bullet")
-                }
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showAddToPlaylist = true
-                } label: {
-                    Image(systemName: "plus.circle")
                 }
             }
         }
@@ -299,6 +284,27 @@ struct VideoDetailView: View {
                     .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
                 }
                 .buttonStyle(.plain)
+            }
+            HStack(spacing: 12) {
+                Menu {
+                    downloadMenuItem(kind: .video)
+                    downloadMenuItem(kind: .audio)
+                } label: {
+                    Label("Download", systemImage: "arrow.down.circle")
+                        .font(.footnote.weight(.medium))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+                }
+                Button {
+                    showAddToPlaylist = true
+                } label: {
+                    Label("Add to playlist", systemImage: "plus.circle")
+                        .font(.footnote.weight(.medium))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+                }
             }
             if let description = model.stream?.description, !description.isEmpty {
                 Button {
