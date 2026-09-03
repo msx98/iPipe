@@ -56,9 +56,9 @@ struct MockExtractionService: ExtractionService {
             throw ExtractionError.videoUnavailable("Not found in sample data")
         }
         let formats: [VideoFormat] = [
-            VideoFormat(kind: .muxed, url: URL(string: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4")!, itag: 18, label: "360p · mp4"),
-            VideoFormat(kind: .muxed, url: URL(string: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4")!, itag: 22, label: "720p · mp4"),
-            VideoFormat(kind: .audioOnly, url: URL(string: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4")!, itag: 140, label: "Audio · m4a")
+            VideoFormat(kind: .muxed, url: URL(string: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4")!, itag: 18, label: "360p · mp4"),
+            VideoFormat(kind: .muxed, url: URL(string: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4")!, itag: 22, label: "720p · mp4"),
+            VideoFormat(kind: .audioOnly, url: URL(string: "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4")!, itag: 140, label: "Audio · m4a")
         ]
         return (stream, formats, sampleStreams.filter { $0.id != id })
     }
