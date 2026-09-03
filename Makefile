@@ -170,6 +170,7 @@ release: build
 		echo "ERROR: tag $$tag already exists"; exit 1; \
 	fi; \
 	echo "=== Tagging $$(git rev-parse HEAD) as $$tag ==="; \
+	git push \
 	git tag -a "$$tag" -m "Release $$tag"; \
 	git push origin "$$tag"
 

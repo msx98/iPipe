@@ -4,6 +4,12 @@ A Swift/SwiftUI port of the [NewPipe](https://newpipe.net) YouTube client. Pure 
 
 > **Disclaimer**: An experimental personal project. Not affiliated with Google or YouTube. For private/research use only — respect YouTube's Terms of Service in any real deployment.
 
+IPA download is in [the releases page](../../releases/latest).
+
+It is unsigned, but you can use an app like [Feather](../../../../claration/Feather) to sign and install it on your device.
+
+Note that sign-ins will only work if you set a keychain access group: $TEAMID.ax.lx.ipipe
+
 ## Screenshots
 
 <p>
