@@ -269,12 +269,13 @@ struct PlaylistDetailScreen: View {
             }
             Section {
                 ForEach(Array(playlist.streams.enumerated()), id: \.element.id) { index, item in
-                    NavigationLink(value: item.stream) {
+                    Button {
+                        app.playlistsPath.append(item.stream)
+                        Task { await model.playItem(at: index, app: app) }
+                    } label: {
                         streamRow(item.stream)
                     }
-                    .simultaneousGesture(TapGesture().onEnded {
-                        Task { await model.playItem(at: index, app: app) }
-                    })
+                    .buttonStyle(.plain)
                 }
                 .onMove { offsets, destination in
                     app.playlists.moveItem(from: offsets, to: destination, in: playlist)
