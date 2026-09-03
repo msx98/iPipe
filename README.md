@@ -44,9 +44,7 @@ make clean                  # remove build/
 
 `make build` smart-skips rebuilding when the git tree is clean and `BUNDLE_ID` is unchanged, so the inner loop is just `make ARCH=simulator install` → launch.
 
-### Configuration (env vars)
-
-| Var | Default | Purpose |
+| Env Var | Default | Purpose |
 |---|---|---|
 | `ARCH` | `device` | `device` or `simulator` |
 | `SIM` | `booted` | simctl device for simulator builds |
