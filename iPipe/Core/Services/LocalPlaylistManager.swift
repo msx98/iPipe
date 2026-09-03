@@ -8,6 +8,10 @@ final class LocalPlaylistManager {
 
     private static let storageKey = "np.playlists.v1"
 
+    init() {
+        load()
+    }
+
     @discardableResult
     func create(_ name: String, streams: [StreamItem]) -> LocalPlaylist? {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)

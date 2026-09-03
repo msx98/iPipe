@@ -209,39 +209,37 @@ struct PlaylistDetailScreen: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if let currentPlaylist = playlist, !currentPlaylist.streams.isEmpty {
-                    detailContent(currentPlaylist)
-                } else {
-                    ContentUnavailableView(
-                        "Playlist unavailable",
-                        systemImage: "list.bullet",
-                        description: Text("This playlist no longer exists or is empty.")
-                    )
-                }
+        Group {
+            if let currentPlaylist = playlist, !currentPlaylist.streams.isEmpty {
+                detailContent(currentPlaylist)
+            } else {
+                ContentUnavailableView(
+                    "Playlist unavailable",
+                    systemImage: "list.bullet",
+                    description: Text("This playlist no longer exists or is empty.")
+                )
             }
-            .navigationTitle(playlist?.name ?? "Playlist")
-            .toolbar { playlistToolbar }
-            .navigationDestination(for: StreamItem.self) { VideoDetailView(stream: $0) }
-            .alert("Rename Playlist", isPresented: $model.showRenameAlert) {
-                TextField("Name", text: $model.newName)
-                Button("Save") {
-                    model.rename(to: model.newName, app: app)
-                }
-                Button("Cancel", role: .cancel) {}
+        }
+        .navigationTitle(playlist?.name ?? "Playlist")
+        .toolbar { playlistToolbar }
+        .navigationDestination(for: StreamItem.self) { VideoDetailView(stream: $0) }
+        .alert("Rename Playlist", isPresented: $model.showRenameAlert) {
+            TextField("Name", text: $model.newName)
+            Button("Save") {
+                model.rename(to: model.newName, app: app)
             }
-            .sheet(isPresented: $model.showShareSheet) {
-                ShareSheet(items: [model.shareText])
+            Button("Cancel", role: .cancel) {}
+        }
+        .sheet(isPresented: $model.showShareSheet) {
+            ShareSheet(items: [model.shareText])
+        }
+        .alert("Remove watched videos", isPresented: $model.showRemoveWatchedConfirm) {
+            Button("Remove") {
+                model.removeWatched(app: app)
             }
-            .alert("Remove watched videos", isPresented: $model.showRemoveWatchedConfirm) {
-                Button("Remove") {
-                    model.removeWatched(app: app)
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("Remove videos you've already watched from this playlist?")
-            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Remove videos you've already watched from this playlist?")
         }
     }
 
