@@ -1,0 +1,16 @@
+# Build artifacts (produced by make, never committed)
+build/
+DerivedData/
+
+# Local state
+.debug/
+.venv/
+
+# Xcode user state
+xcuserdata/
+
+# macOS cruft
+.DS_Store
+
+# Never commit auth cookies
+cookies.txt
