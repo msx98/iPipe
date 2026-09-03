@@ -4,6 +4,7 @@ struct VideoPlayerOverlay: View {
     @Environment(AppModel.self) private var app
     let stream: StreamItem
     @State private var expanded = true
+    @State private var dragOffset: CGFloat = 0
 
     var body: some View {
         GeometryReader { geo in
@@ -16,31 +17,43 @@ struct VideoPlayerOverlay: View {
 
                 if expanded {
                     NavigationStack {
-                        VideoDetailView(stream: stream, onSwipeDownToCollapse: collapse)
-                            .navigationDestination(for: StreamItem.self) { related in
-                                VideoDetailView(stream: related, onSwipeDownToCollapse: collapse)
-                            }
-                            .navigationDestination(for: ChannelItem.self) { ChannelView(channel: $0) }
-                            .toolbar {
-                                ToolbarItem(placement: .topBarLeading) {
-                                    Button { close() } label: {
-                                        Image(systemName: "xmark")
-                                    }
+                        VideoDetailView(
+                            stream: stream,
+                            onPlayerDragChanged: { offset in
+                                dragOffset = max(0, offset)
+                            },
+                            onPlayerDragEnded: finishDrag
+                        )
+                        .navigationDestination(for: StreamItem.self) { related in
+                            VideoDetailView(
+                                stream: related,
+                                onPlayerDragChanged: { offset in
+                                    dragOffset = max(0, offset)
+                                },
+                                onPlayerDragEnded: finishDrag
+                            )
+                        }
+                        .navigationDestination(for: ChannelItem.self) { ChannelView(channel: $0) }
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button { close() } label: {
+                                    Image(systemName: "xmark")
                                 }
-                                ToolbarItem(placement: .principal) {
-                                    DragHandle()
-                                        .contentShape(Rectangle())
-                                        .gesture(
-                                            DragGesture(minimumDistance: 10)
-                                                .onEnded { value in
-                                                    if value.translation.height > 60 || value.predictedEndTranslation.height > 60 {
-                                                        collapse()
-                                                    }
-                                                }
-                                        )
-                                }
                             }
+                            ToolbarItem(placement: .principal) {
+                                DragHandle()
+                                    .contentShape(Rectangle())
+                                    .gesture(
+                                        DragGesture(minimumDistance: 10)
+                                            .onChanged { value in
+                                                dragOffset = max(0, value.translation.height)
+                                            }
+                                            .onEnded(finishDrag)
+                                    )
+                            }
+                        }
                     }
+                    .offset(y: dragOffset)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 } else {
                     MiniPlayerBar(onOpen: expand, onClose: close)
@@ -54,8 +67,33 @@ struct VideoPlayerOverlay: View {
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: expanded)
     }
 
-    private func collapse() { expanded = false }
-    private func expand() { expanded = true }
+    /// While the finger moves, the window slides with it. Pausing in the middle of
+    /// a drag keeps the window mid-way; releasing lets it finish collapsing if
+    /// pulled far enough, or spring back to the top otherwise.
+    private func finishDrag(_ value: DragGesture.Value) {
+        if value.translation.height > 140 || value.predictedEndTranslation.height > 120 {
+            collapse()
+        } else {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                dragOffset = 0
+            }
+        }
+    }
+
+    private func collapse() {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            dragOffset = 0
+            expanded = false
+        }
+    }
+
+    private func expand() {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            dragOffset = 0
+            expanded = true
+        }
+    }
+
     private func close() {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
             app.focusedVideo = nil
