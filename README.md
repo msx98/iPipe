@@ -13,8 +13,8 @@ Note that sign-ins will only work if you set a keychain access group: $TEAMID.ax
 ## Screenshots
 
 <p>
-  <img src="screenshots/screenshot-1.png" width="300" alt="iPipe screenshot 1" />
-  <img src="screenshots/screenshot-2.png" width="300" alt="iPipe screenshot 2" />
+  <img src="assets/screenshots/screenshot-1.png" width="300" alt="iPipe screenshot 1" />
+  <img src="assets/screenshots/screenshot-2.png" width="300" alt="iPipe screenshot 2" />
 </p>
 
 ## Features

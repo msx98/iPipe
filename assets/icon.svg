@@ -1,4 +1,56 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <rect x="0" y="0" width="1024" height="1024" rx="226" ry="226" fill="#E53935"/>
-  <polygon points="352,320 352,704 672,512" fill="#FFFFFF"/>
+  <defs>
+    <!-- Equilateral triangle, all sides equal, centered at 0,0, pointing right -->
+    <polygon id="playIcon" points="26,0 -13,22.5 -13,-22.5" />
+  </defs>
+
+  <!-- Base tile -->
+  <rect width="1024" height="1024" rx="226" fill="#1E293B"/>
+
+  <!-- Pipe -->
+  <path d="M 320 270 L 320 594 A 110 110 0 0 0 430 704 L 754 704"
+        fill="none"
+        stroke="#0EA5E9"
+        stroke-width="110"
+        stroke-linecap="square"/>
+
+  <!-- Flanges -->
+  <rect x="236" y="210" width="168" height="60" rx="16" fill="#38BDF8"/>
+  <rect x="754" y="620" width="60" height="168" rx="16" fill="#38BDF8"/>
+
+  <!-- Icons flowing down the inlet -->
+  <g fill="#FFFFFF">
+    <use href="#playIcon" transform="translate(320,300) rotate(82)" />
+    <use href="#playIcon" transform="translate(330,350) rotate(-10)" />
+    <use href="#playIcon" transform="translate(310,400) rotate(200)" />
+    <use href="#playIcon" transform="translate(325,450) rotate(45)" />
+    <use href="#playIcon" transform="translate(315,500) rotate(-140)" />
+    <use href="#playIcon" transform="translate(320,550) rotate(100)" />
+
+    <!-- Icons through the bend -->
+    <use href="#playIcon" transform="translate(345,610) rotate(15)" />
+    <use href="#playIcon" transform="translate(378,648) rotate(-60)" />
+    <use href="#playIcon" transform="translate(412,682) rotate(170)" />
+
+    <!-- Icons along the horizontal run -->
+    <use href="#playIcon" transform="translate(455,704) rotate(5)" />
+    <use href="#playIcon" transform="translate(505,704) rotate(-30)" />
+    <use href="#playIcon" transform="translate(555,704) rotate(120)" />
+    <use href="#playIcon" transform="translate(605,704) rotate(-80)" />
+    <use href="#playIcon" transform="translate(655,704) rotate(200)" />
+    <use href="#playIcon" transform="translate(705,704) rotate(40)" />
+
+    <!-- Icons bursting out the outlet -->
+    <use href="#playIcon" transform="translate(820,704) rotate(15) scale(0.8)" />
+    <use href="#playIcon" transform="translate(850,660) rotate(210) scale(1.1)" />
+    <use href="#playIcon" transform="translate(860,740) rotate(100) scale(0.9)" />
+    <use href="#playIcon" transform="translate(900,620) rotate(-45) scale(1.3)" />
+    <use href="#playIcon" transform="translate(910,700) rotate(5) scale(1.5)" />
+    <use href="#playIcon" transform="translate(890,780) rotate(150) scale(0.7)" />
+    <use href="#playIcon" transform="translate(960,650) rotate(-100) scale(1.2)" />
+    <use href="#playIcon" transform="translate(980,730) rotate(60) scale(1.0)" />
+    <use href="#playIcon" transform="translate(940,800) rotate(250) scale(0.85)" />
+    <use href="#playIcon" transform="translate(970,580) rotate(-160) scale(0.9)" />
+  </g>
 </svg>
+
