@@ -57,7 +57,7 @@ TEAM_ID ?= A1111ABCDE
 # Tag name used by `make release` (default: v<short commit sha>). The CI
 # workflow builds and publishes a GitHub Release for tags matching v*.
 #   make release RELEASE_TAG=v0.2.0
-RELEASE_TAG ?= v$(shell git rev-parse --short=12 HEAD)
+RELEASE_TAG ?= release-$(shell git rev-parse --short=12 HEAD)
 
 # Optional: copy this cookies file into the app's Documents directory right
 # after install (as cookies.txt). The app ingests it on next startup, stores
