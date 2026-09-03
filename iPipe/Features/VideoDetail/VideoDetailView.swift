@@ -36,8 +36,6 @@ struct VideoDetailView: View {
     @Environment(AppModel.self) private var app
     let stream: StreamItem
     var onSwipeDownToCollapse: () -> Void = {}
-    var onPlayerDragChanged: ((CGFloat) -> Void)?
-    var onPlayerDragEnded: ((DragGesture.Value) -> Void)?
     @State private var model = VideoDetailModel()
     @State private var showDescription = false
     @State private var showAddToPlaylist = false
@@ -211,12 +209,11 @@ struct VideoDetailView: View {
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .contentShape(Rectangle())
             .gesture(
-                DragGesture(minimumDistance: 6)
-                    .onChanged { value in
-                        onPlayerDragChanged?(max(0, value.translation.height))
-                    }
+                DragGesture(minimumDistance: 12)
                     .onEnded { value in
-                        onPlayerDragEnded?(value)
+                        if value.translation.height > 120 || value.predictedEndTranslation.height > 90 {
+                            onSwipeDownToCollapse()
+                        }
                     }
             )
 
