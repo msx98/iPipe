@@ -14,3 +14,5 @@ xcuserdata/
 
 # Never commit auth cookies
 cookies.txt
+
+.env
