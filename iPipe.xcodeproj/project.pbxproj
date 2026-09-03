@@ -31,6 +31,10 @@
 		C505846D01FB3737135D3030 /* Log.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFDC9DAE2B7C1671FFBBE969 /* Log.swift */; };
 		6D84B1369A1A16597FE0612F /* DeepLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110D74848A8FD3C44D43FF45 /* DeepLink.swift */; };
 		D9647CEB55EC7E0C3CB75F2E /* YouTubeURLs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26037A895F265EC8E8EE88F3 /* YouTubeURLs.swift */; };
+		C100000000000000000000A1 /* PlaylistModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = C100000000000000000000A2 /* PlaylistModels.swift */; };
+		C100000000000000000000B1 /* LocalPlaylistManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C100000000000000000000B2 /* LocalPlaylistManager.swift */; };
+		C100000000000000000000D1 /* PlaylistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C100000000000000000000D2 /* PlaylistsView.swift */; };
+		C100000000000000000000E1 /* VideoPlayerOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C100000000000000000000E2 /* VideoPlayerOverlay.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -48,6 +52,10 @@
 		BFDC9DAE2B7C1671FFBBE969 /* Log.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
 		110D74848A8FD3C44D43FF45 /* DeepLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLink.swift; sourceTree = "<group>"; };
 		26037A895F265EC8E8EE88F3 /* YouTubeURLs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeURLs.swift; sourceTree = "<group>"; };
+		C100000000000000000000A2 /* PlaylistModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistModels.swift; sourceTree = "<group>"; };
+		C100000000000000000000B2 /* LocalPlaylistManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalPlaylistManager.swift; sourceTree = "<group>"; };
+		C100000000000000000000D2 /* PlaylistsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistsView.swift; sourceTree = "<group>"; };
+		C100000000000000000000E2 /* VideoPlayerOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerOverlay.swift; sourceTree = "<group>"; };
 		62933F08D94BFA3A1BDF272E /* TrendingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendingView.swift; sourceTree = "<group>"; };
 		473F5DC8C8B08701FACBC73E /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		E96BC027D3B2964198963BC1 /* SubscriptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionsView.swift; sourceTree = "<group>"; };
@@ -123,6 +131,7 @@
 			isa = PBXGroup;
 			children = (
 				D617B12E2197849B0A4906A2 /* Models.swift */,
+				C100000000000000000000A2 /* PlaylistModels.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -142,6 +151,7 @@
 			children = (
 				68D2808EDA7E89491FA4D969 /* CookieStore.swift */,
 				F2313B66EED0D00562371EDF /* DownloadManager.swift */,
+				C100000000000000000000B2 /* LocalPlaylistManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -180,6 +190,7 @@
 				B0FE40CF214719BB3BDA5F70 /* Channel */,
 				E74680E53F3891CD30247774 /* Settings */,
 				17A76B6EACC9C9F77DC9B7D4 /* Downloads */,
+				C100000000000000000000C1 /* Playlists */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -212,6 +223,7 @@
 			isa = PBXGroup;
 			children = (
 				314D6E4C1A420ED3E6056BAF /* VideoDetailView.swift */,
+				C100000000000000000000E2 /* VideoPlayerOverlay.swift */,
 			);
 			path = VideoDetail;
 			sourceTree = "<group>";
@@ -247,6 +259,14 @@
 				C53507C81045CAB65CAFC4F6 /* DownloadsView.swift */,
 			);
 			path = Downloads;
+			sourceTree = "<group>";
+		};
+		C100000000000000000000C1 /* Playlists */ = {
+			isa = PBXGroup;
+			children = (
+				C100000000000000000000D2 /* PlaylistsView.swift */,
+			);
+			path = Playlists;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -336,6 +356,10 @@
 				9C6ACAB1D61A6F1653CF2B5D /* VideoDetailView.swift in Sources */,
 				888186507EC2BDA2183E8880 /* ChannelView.swift in Sources */,
 				2CB49AEF864D93D0D445BC7A /* SettingsView.swift in Sources */,
+			C100000000000000000000A1 /* PlaylistModels.swift in Sources */,
+			C100000000000000000000B1 /* LocalPlaylistManager.swift in Sources */,
+			C100000000000000000000D1 /* PlaylistsView.swift in Sources */,
+			C100000000000000000000E1 /* VideoPlayerOverlay.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

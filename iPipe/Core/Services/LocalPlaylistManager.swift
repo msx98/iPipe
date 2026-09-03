@@ -8,6 +8,7 @@ final class LocalPlaylistManager {
 
     private static let storageKey = "np.playlists.v1"
 
+    @discardableResult
     func create(_ name: String, streams: [StreamItem]) -> LocalPlaylist? {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
@@ -22,6 +23,7 @@ final class LocalPlaylistManager {
         return playlist
     }
 
+    @discardableResult
     func append(_ streams: [StreamItem], to playlist: LocalPlaylist) -> Bool {
         guard let idx = playlists.firstIndex(where: { $0.id == playlist.id }) else { return false }
         var changed = false
@@ -49,18 +51,15 @@ final class LocalPlaylistManager {
 
     func moveItem(from offsets: IndexSet, to destination: Int, in playlist: LocalPlaylist) {
         guard let idx = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
-        playlists[idx].streams.moveSubrange(offsets, to: destination)
+        playlists[idx].streams.move(fromOffsets: offsets, toOffset: destination)
         save()
     }
 
     func moveItem(_ item: LocalPlaylistItem, within playlist: LocalPlaylist) {
         guard let idx = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
-        let from = playlists[idx].streams.firstIndex(where: { $0.id == item.id ?? $0.stream.id })
-        let to = playlists[idx].streams.firstIndex(where: { $0.stream.id == item.stream.id })
-        guard let from, from != to else { return }
-        let element = playlists[idx].streams.remove(at: from)
-        let clampedDestination = min(to, playlists[idx].streams.count)
-        playlists[idx].streams.insert(element, at: clampedDestination)
+        guard let index = playlists[idx].streams.firstIndex(where: { $0.stream.id == item.stream.id }) else { return }
+        let element = playlists[idx].streams.remove(at: index)
+        playlists[idx].streams.append(element)
         save()
     }
 
@@ -107,15 +106,15 @@ final class LocalPlaylistManager {
     }
 
     private func fixThumbnail(at idx: Int) {
-        var id = playlists[idx].thumbnailStreamID
-        if let id {
-            if !playlists[idx].streams.contains(where: { $0.stream.id == id }) {
-                id = playlists[idx].streams.first?.id
+        var tid = playlists[idx].thumbnailStreamID
+        if let current = tid {
+            if !playlists[idx].streams.contains(where: { $0.stream.id == current }) {
+                tid = playlists[idx].streams.first?.id
             }
         } else {
-            id = playlists[idx].streams.first?.id
+            tid = playlists[idx].streams.first?.id
         }
-        playlists[idx].thumbnailStreamID = id
+        playlists[idx].thumbnailStreamID = tid
     }
 
     private static func youtubeID(from url: URL?) -> String? {

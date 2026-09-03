@@ -16,12 +16,11 @@ final class PlayerModel {
 
     var queue: [QueueItem] = []
     var queueIndex = 0
-    private var endObserver: NSKeyValueObservation?
+    private var endObserver: NSObjectProtocol?
 
     func playQueue(_ items: [QueueItem], startAt: Int = 0) {
         guard !items.isEmpty else { return }
-        endObserver?.invalidate()
-        endObserver = nil
+        removeEndObserver()
         queue = items
         queueIndex = max(0, min(startAt, items.count - 1))
         let first = queue[queueIndex]
@@ -39,6 +38,7 @@ final class PlayerModel {
         } else {
             queue = []
             queueIndex = 0
+            removeEndObserver()
         }
     }
 
@@ -46,13 +46,24 @@ final class PlayerModel {
         playNext()
     }
 
-    private func registerEndObserver() {
-        endObserver?.invalidate()
+    private func removeEndObserver() {
+        if let endObserver {
+            NotificationCenter.default.removeObserver(endObserver)
+        }
         endObserver = nil
+    }
+
+    private func registerEndObserver() {
+        removeEndObserver()
         guard let item = player?.currentItem else { return }
-        endObserver = item.observe(\.status, options: [.new]) { [weak self] _, change in
-            guard change.newValue == .ended else { return }
-            Task { @MainActor in self?.onItemEnded() }
+        endObserver = NotificationCenter.default.addObserver(
+            forName: AVPlayerItem.didPlayToEndTimeNotification,
+            object: item,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.onItemEnded()
+            }
         }
     }
 
