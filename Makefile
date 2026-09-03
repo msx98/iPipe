@@ -112,7 +112,7 @@ build:
 		rm -rf "$(APP_PATH)"; \
 		cp -R "$(DERIVED)/Build/Products/$(PRODUCT_SUBDIR)/$(APP_NAME).app" "$(APP_PATH)"; \
 		echo "$(BUNDLE_ID)" > "$(APPROOT)/.bundle_id"; \
-		git add -A; \
+		git add .; \
 		git diff --cached --quiet || git commit -q -m "build $$(date '+%Y-%m-%d %H:%M:%S')"; \
 	else \
 		echo "=== Tree clean; reusing $(APP_PATH) ==="; \
