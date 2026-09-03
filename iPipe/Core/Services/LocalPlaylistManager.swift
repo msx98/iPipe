@@ -1,0 +1,139 @@
+import Foundation
+import Observation
+
+@Observable
+@MainActor
+final class LocalPlaylistManager {
+    var playlists: [LocalPlaylist] = []
+
+    private static let storageKey = "np.playlists.v1"
+
+    func create(_ name: String, streams: [StreamItem]) -> LocalPlaylist? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let playlist = LocalPlaylist(
+            id: UUID().uuidString,
+            name: trimmed,
+            thumbnailStreamID: streams.first?.id,
+            streams: streams.map { LocalPlaylistItem(id: UUID().uuidString, stream: $0) }
+        )
+        playlists.insert(playlist, at: 0)
+        save()
+        return playlist
+    }
+
+    func append(_ streams: [StreamItem], to playlist: LocalPlaylist) -> Bool {
+        guard let idx = playlists.firstIndex(where: { $0.id == playlist.id }) else { return false }
+        var changed = false
+        for stream in streams where !playlists[idx].streams.contains(where: { $0.stream.id == stream.id }) {
+            playlists[idx].streams.append(LocalPlaylistItem(id: UUID().uuidString, stream: stream))
+            changed = true
+        }
+        if changed { save() }
+        return changed
+    }
+
+    func delete(_ playlist: LocalPlaylist) {
+        let idx = playlists.firstIndex(where: { $0.id == playlist.id })
+        guard let idx else { return }
+        playlists.remove(at: idx)
+        save()
+    }
+
+    func rename(_ playlist: LocalPlaylist, to name: String) {
+        guard let idx = playlists.firstIndex(where: { $0.id == playlist.id }),
+              !name.isEmpty else { return }
+        playlists[idx].name = name
+        save()
+    }
+
+    func moveItem(from offsets: IndexSet, to destination: Int, in playlist: LocalPlaylist) {
+        guard let idx = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
+        playlists[idx].streams.moveSubrange(offsets, to: destination)
+        save()
+    }
+
+    func moveItem(_ item: LocalPlaylistItem, within playlist: LocalPlaylist) {
+        guard let idx = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
+        let from = playlists[idx].streams.firstIndex(where: { $0.id == item.id ?? $0.stream.id })
+        let to = playlists[idx].streams.firstIndex(where: { $0.stream.id == item.stream.id })
+        guard let from, from != to else { return }
+        let element = playlists[idx].streams.remove(at: from)
+        let clampedDestination = min(to, playlists[idx].streams.count)
+        playlists[idx].streams.insert(element, at: clampedDestination)
+        save()
+    }
+
+    func removeItem(_ item: LocalPlaylistItem, from playlist: LocalPlaylist) {
+        guard let idx = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
+        playlists[idx].streams.removeAll { $0.stream.id == item.stream.id }
+        fixThumbnail(at: idx)
+        save()
+    }
+
+    func removeDuplicates(from playlist: LocalPlaylist) {
+        guard let idx = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
+        var seen = Set<String>()
+        var kept = [LocalPlaylistItem]()
+        for item in playlists[idx].streams where seen.insert(item.stream.id).inserted {
+            kept.append(item)
+        }
+        playlists[idx].streams = kept
+        fixThumbnail(at: idx)
+        save()
+    }
+
+    func removeWatched(in playlist: LocalPlaylist, watchedIDs: Set<String>) {
+        guard let idx = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
+        playlists[idx].streams.removeAll { watchedIDs.contains($0.stream.id) }
+        fixThumbnail(at: idx)
+        save()
+    }
+
+    func export(_ playlist: LocalPlaylist, mode: PlaylistShareMode) -> String {
+        let items = playlist.streams
+        switch mode {
+        case .withTitles:
+            return items.map { "\($0.stream.title)\n\($0.stream.watchURL?.absoluteString ?? "https://www.youtube.com/watch?v=\($0.stream.id)")" }.joined(separator: "\n")
+        case .justUrls:
+            return items.map { $0.stream.watchURL?.absoluteString ?? "https://www.youtube.com/watch?v=\($0.stream.id)" }.joined(separator: "\n")
+        case .youtubeTemp:
+            let ids = items
+                .compactMap { Self.youtubeID(from: $0.stream.watchURL) }
+                .reversed()
+                .prefix(50)
+            return "https://www.youtube.com/watch_videos?video_ids=" + ids.joined(separator: ",")
+        }
+    }
+
+    private func fixThumbnail(at idx: Int) {
+        var id = playlists[idx].thumbnailStreamID
+        if let id {
+            if !playlists[idx].streams.contains(where: { $0.stream.id == id }) {
+                id = playlists[idx].streams.first?.id
+            }
+        } else {
+            id = playlists[idx].streams.first?.id
+        }
+        playlists[idx].thumbnailStreamID = id
+    }
+
+    private static func youtubeID(from url: URL?) -> String? {
+        guard let url else { return nil }
+        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        return components?.queryItems?.first(where: { $0.name == "v" })?.value
+    }
+
+    private func load() {
+        if let data = UserDefaults.standard.data(forKey: Self.storageKey),
+           let decoded = try? JSONDecoder().decode([LocalPlaylist].self, from: data) {
+            playlists = decoded
+        }
+        save()
+    }
+
+    private func save() {
+        guard let data = try? JSONEncoder().encode(playlists) else { return }
+        UserDefaults.standard.set(data, forKey: Self.storageKey)
+    }
+}

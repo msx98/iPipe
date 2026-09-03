@@ -156,3 +156,63 @@ struct LoadingFooter: View {
         .padding(.vertical, 16)
     }
 }
+
+struct MiniPlayerBar: View {
+    @Environment(AppModel.self) private var app
+
+    var onOpen: () -> Void = {}
+    var onClose: () -> Void = {}
+
+    var body: some View {
+        if app.player.hasItem, let stream = app.player.currentStream {
+            label(stream: stream)
+        }
+    }
+
+    @ViewBuilder
+    private func label(stream: StreamItem) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: app.player.currentLabel.contains("Audio") ? "music.note" : "play.rectangle.fill")
+                .font(.title3)
+                .foregroundStyle(Theme.accent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(app.player.currentTitle)
+                    .font(.footnote.weight(.semibold))
+                    .lineLimit(1)
+                Text(app.player.currentAuthor)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer()
+            Button {
+                app.player.togglePlayPause()
+            } label: {
+                Image(systemName: app.player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                    .font(.title2)
+            }
+            .buttonStyle(.plain)
+            Button {
+                onClose()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .contentShape(Rectangle())
+        .onTapGesture { onOpen() }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 12)
+                .onEnded { value in
+                    if value.translation.height < -60 || value.predictedEndTranslation.height < -40 {
+                        onOpen()
+                    }
+                }
+        )
+    }
+}

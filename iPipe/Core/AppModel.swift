@@ -13,7 +13,7 @@ final class AppModel {
     }
 
     enum RootTab: String, CaseIterable, Identifiable, Hashable {
-        case trending, search, subscriptions, settings
+        case trending, search, subscriptions, playlists, settings
         var id: String { rawValue }
     }
 
@@ -21,6 +21,7 @@ final class AppModel {
     var trendingPath = NavigationPath()
     var searchPath = NavigationPath()
     var subscriptionsPath = NavigationPath()
+    var playlistsPath = NavigationPath()
     var settingsPath = NavigationPath()
 
     /// When non-nil, the full video preview page is presented (focused). Drives
@@ -32,6 +33,7 @@ final class AppModel {
 
     let player = PlayerModel()
     let downloads = DownloadManager()
+    let playlists = LocalPlaylistManager()
     private(set) var signedIn: Bool = false
 
     var subscriptions: [ChannelItem]

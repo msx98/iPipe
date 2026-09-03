@@ -14,6 +14,48 @@ final class PlayerModel {
     var currentStream: StreamItem?
     var hasItem: Bool { player != nil }
 
+    var queue: [QueueItem] = []
+    var queueIndex = 0
+    private var endObserver: NSKeyValueObservation?
+
+    func playQueue(_ items: [QueueItem], startAt: Int = 0) {
+        guard !items.isEmpty else { return }
+        endObserver?.invalidate()
+        endObserver = nil
+        queue = items
+        queueIndex = max(0, min(startAt, items.count - 1))
+        let first = queue[queueIndex]
+        play(stream: first.stream, formats: first.formats, prefer: first.prefer)
+        registerEndObserver()
+    }
+
+    func playNext() {
+        guard !queue.isEmpty else { return }
+        if queueIndex + 1 < queue.count {
+            queueIndex += 1
+            let next = queue[queueIndex]
+            play(stream: next.stream, formats: next.formats, prefer: next.prefer)
+            registerEndObserver()
+        } else {
+            queue = []
+            queueIndex = 0
+        }
+    }
+
+    func onItemEnded() {
+        playNext()
+    }
+
+    private func registerEndObserver() {
+        endObserver?.invalidate()
+        endObserver = nil
+        guard let item = player?.currentItem else { return }
+        endObserver = item.observe(\.status, options: [.new]) { [weak self] _, change in
+            guard change.newValue == .ended else { return }
+            Task { @MainActor in self?.onItemEnded() }
+        }
+    }
+
     struct PlaybackOption: Identifiable {
         let id: String
         let label: String
@@ -79,6 +121,11 @@ final class PlayerModel {
         currentStream = nil
         isPlaying = false
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+    }
+
+    func reactivateAudioSession() {
+        setupAudioSession()
+        player?.play()
     }
 
     func playDownload(video: URL?, audio: URL?, title: String, author: String, duration: TimeInterval) async {

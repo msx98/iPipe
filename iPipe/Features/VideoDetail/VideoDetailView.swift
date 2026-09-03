@@ -11,6 +11,11 @@ final class VideoDetailModel {
     var error: String?
 
     func load(app: AppModel, stream: StreamItem) async {
+        if app.player.currentStream?.id == stream.id, app.player.hasItem {
+            self.stream = stream
+            isLoading = false
+            return
+        }
         isLoading = true
         error = nil
         do {
@@ -29,8 +34,8 @@ final class VideoDetailModel {
 
 struct VideoDetailView: View {
     @Environment(AppModel.self) private var app
-    @Environment(\.dismiss) private var dismiss
     let stream: StreamItem
+    var onSwipeDownToCollapse: () -> Void = {}
     @State private var model = VideoDetailModel()
     @State private var showDescription = false
 
@@ -67,35 +72,38 @@ struct VideoDetailView: View {
     }
 
     private var detailContent: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                playerSection
-                metadataSection
-                if !model.related.isEmpty {
-                    Divider()
-                    Text("Related").font(.headline)
-                    LazyVStack(spacing: 14) {
-                        ForEach(model.related) { related in
-                            NavigationLink(value: related) {
-                                HStack(spacing: 10) {
-                                    AsyncThumbnail(url: related.thumbnailURL, videoId: related.id)
-                                        .frame(width: 140)
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(related.title).font(.footnote.weight(.semibold)).lineLimit(2)
-                                        Text(related.author).font(.caption2).foregroundStyle(.secondary)
-                                        Text([related.viewCountText, related.publishedText].compactMap { $0 }.joined(separator: " · "))
-                                            .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+        VStack(spacing: 0) {
+            playerSection
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    metadataSection
+                    if !model.related.isEmpty {
+                        Divider()
+                        Text("Related").font(.headline)
+                        LazyVStack(spacing: 14) {
+                            ForEach(model.related) { related in
+                                NavigationLink(value: related) {
+                                    HStack(spacing: 10) {
+                                        AsyncThumbnail(url: related.thumbnailURL, videoId: related.id)
+                                            .frame(width: 140)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(related.title).font(.footnote.weight(.semibold)).lineLimit(2)
+                                            Text(related.author).font(.caption2).foregroundStyle(.secondary)
+                                            Text([related.viewCountText, related.publishedText].compactMap { $0 }.joined(separator: " · "))
+                                                .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                                        }
+                                        Spacer()
                                     }
-                                    Spacer()
                                 }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                 }
+                .padding(.horizontal)
+                .padding(.top, 14)
+                .padding(.bottom, 24)
             }
-            .padding(.horizontal)
-            .padding(.bottom, 24)
         }
     }
 
@@ -113,6 +121,15 @@ struct VideoDetailView: View {
             }
             .aspectRatio(16 / 9, contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: 10))
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 12)
+                    .onEnded { value in
+                        if value.translation.height > 120 || value.predictedEndTranslation.height > 90 {
+                            onSwipeDownToCollapse()
+                        }
+                    }
+            )
 
             HStack {
                 Menu {
