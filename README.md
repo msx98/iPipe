@@ -18,10 +18,9 @@ An iOS YouTube client with background play and more. Pure Swift, zero third-part
 
 - Full **video detail/player** screen — metadata, description, related videos, and a quality picker
 - **Downloads** — video (≤1080p) and audio (itag 140), with per-part progress, saved under `Documents/Downloads/`
-- Picture-in-style background audio playback (synthetic HLS manifests via [`HLSResourceLoader`/`HLSBuilder`](iPipe/Core/Player/PlayerModel.swift))
-- Account flows: in-app **Youtube login** (`WKWebView`), cookie import/export, signed request signing
-- Interchangeable backend: real **InnerTube** extraction vs an offline **Sample** data source (switch in Settings)
-- Deep links: opening `ipipe://<youtube-video-id>` jumps straight into the player
+- Background audio playback
+- Account login, cookies.txt import/export
+- Planned: playlists a-la NewPipe, Netflix-style PiP video playback
 
 ## Build & install
 
