@@ -11,11 +11,6 @@ final class VideoDetailModel {
     var error: String?
 
     func load(app: AppModel, stream: StreamItem) async {
-        if app.player.currentStream?.id == stream.id, app.player.hasItem {
-            self.stream = stream
-            isLoading = false
-            return
-        }
         isLoading = true
         error = nil
         do {
@@ -23,7 +18,12 @@ final class VideoDetailModel {
             self.stream = details.stream
             self.formats = details.formats
             self.related = details.related
-            app.player.play(stream: details.stream, formats: details.formats, prefer: nil)
+            // If this video is already the active playback, don't restart it —
+            // just refresh metadata/related so collapsing and re-expanding the
+            // player keeps the related list populated.
+            if app.player.currentStream?.id != stream.id || !app.player.hasItem {
+                app.player.play(stream: details.stream, formats: details.formats, prefer: nil)
+            }
             app.recordWatch(details.stream)
         } catch {
             self.error = error.localizedDescription

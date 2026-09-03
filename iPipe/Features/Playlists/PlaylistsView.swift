@@ -238,7 +238,7 @@ struct PlaylistDetailScreen: View {
                 )
             }
         }
-        .navigationTitle(playlist?.name ?? "Playlist")
+        .navigationTitle("")
         .toolbar { playlistToolbar }
         .navigationDestination(for: StreamItem.self) { VideoDetailView(stream: $0) }
         .alert("Rename Playlist", isPresented: $model.showRenameAlert) {
