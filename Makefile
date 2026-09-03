@@ -54,6 +54,11 @@ BUNDLE_ID ?= ax.lx.ipipe
 #   make install TEAM_ID=<your-team-id>
 TEAM_ID ?= A1111ABCDE
 
+# Tag name used by `make release` (default: v<short commit sha>). The CI
+# workflow builds and publishes a GitHub Release for tags matching v*.
+#   make release RELEASE_TAG=v0.2.0
+RELEASE_TAG ?= v$(shell git rev-parse --short=12 HEAD)
+
 # Optional: copy this cookies file into the app's Documents directory right
 # after install (as cookies.txt). The app ingests it on next startup, stores
 # it in the keychain, and deletes the file. Leave empty to skip delivery.
@@ -64,7 +69,7 @@ COOKIESFILE ?=
 # devices over the house_arrest/AFC service).
 PMD_PYTHON ?= $(shell for p in $(HOME)/.venv/bin/python $(HOME)/.venv/bin/python3 python3; do "$$p" -c 'import pymobiledevice3' >/dev/null 2>&1 && { echo "$$p"; break; }; done)
 
-.PHONY: help build install launch clean
+.PHONY: help build install launch release clean
 
 help:
 	@echo "Targets:"
@@ -77,6 +82,9 @@ help:
 ##            Documents/ (as cookies.txt) on the installed target; the app
 ##            ingests it at startup and deletes it
 ## launch   — launch on $(DEVICE) / $(SIM)
+## release  — tag the current commit (default v<short-sha>, override with
+##            RELEASE_TAG=<name>) and push it; the CI workflow builds the tag
+##            and publishes the GitHub Release with the IPA
 ## clean    — remove build/
 
 # Build only when the working tree differs from HEAD (or no staged app
@@ -148,6 +156,22 @@ launch:
 	@echo "=== Launching $(BUNDLE_ID) on simulator $(SIM) ==="
 	xcrun simctl launch --terminate-running-process "$(SIM)" "$(BUNDLE_ID)"
 endif
+
+# Tag the current commit and push it to trigger the CI release workflow
+# (which builds the tag and publishes a GitHub Release with the IPA).
+# Refuses to run on a dirty tree so the tag always points at committed code.
+release: build
+	@set -e; \
+	tag="$(RELEASE_TAG)"; \
+	if [ -n "$$(git status --porcelain)" ]; then \
+		echo "ERROR: working tree dirty; commit or stash before releasing"; exit 1; \
+	fi; \
+	if git rev-parse -q --verify "refs/tags/$$tag" >/dev/null; then \
+		echo "ERROR: tag $$tag already exists"; exit 1; \
+	fi; \
+	echo "=== Tagging $$(git rev-parse HEAD) as $$tag ==="; \
+	git tag -a "$$tag" -m "Release $$tag"; \
+	git push origin "$$tag"
 
 clean:
 	rm -rf $(BUILDDIR)
