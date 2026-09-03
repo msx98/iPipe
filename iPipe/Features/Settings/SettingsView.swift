@@ -75,6 +75,7 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            .toolbar { StandardToolbar() }
             .sheet(isPresented: $showLogin) {
                 YouTubeLoginView {
                     app.refreshSignedIn()

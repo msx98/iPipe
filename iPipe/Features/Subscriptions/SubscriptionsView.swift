@@ -28,15 +28,7 @@ struct SubscriptionsView: View {
                 }
             }
             .navigationTitle("Subscriptions")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showHistory = true
-                    } label: {
-                        Image(systemName: "clock.arrow.circlepath")
-                    }
-                }
-            }
+            .toolbar { StandardToolbar() }
             .sheet(isPresented: $showHistory) {
                 NavigationStack {
                     HistoryView()

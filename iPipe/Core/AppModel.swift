@@ -24,6 +24,11 @@ final class AppModel {
     var playlistsPath = NavigationPath()
     var settingsPath = NavigationPath()
 
+    /// Global sheet/cover state driven by the shared toolbar.
+    var showDownloadsSheet = false
+    var showHistorySheet = false
+    var showQueueCover = false
+
     /// When non-nil, the full video preview page is presented (focused). Drives
     /// both the full-screen cover and whether the mini player is visible.
     var focusedVideo: StreamItem?

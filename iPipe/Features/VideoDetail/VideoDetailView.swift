@@ -66,7 +66,7 @@ struct VideoDetailView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    showQueue = true
+                    app.showQueueCover = true
                 } label: {
                     Image(systemName: "list.bullet")
                 }
@@ -332,60 +332,10 @@ struct VideoDetailView: View {
     }
 }
 
-/// Up-next queue showing the latent playback queue. Mirrors the playlist item
-/// interface (thumbnail, title, author), with “Dismiss” in place of delete:
-/// dismissing the active item starts the next one or stops when empty.
+/// Re-exported queue view (full screen + sticky controls) for use in the
+/// video detail sheet; the shared full-screen version lives in QueueScreen.swift.
 struct QueueView: View {
-    @Environment(AppModel.self) private var app
-
     var body: some View {
-        Group {
-            if app.player.queue.isEmpty {
-                ContentUnavailableView(
-                    "Queue is empty",
-                    systemImage: "list.bullet",
-                    description: Text("Videos you play and playlists you background land here.")
-                )
-            } else {
-                List {
-                    ForEach(Array(app.player.queue.enumerated()), id: \.element.stream.id) { index, item in
-                        Button {
-                            app.player.playFromQueue(at: index)
-                        } label: {
-                            HStack(spacing: 12) {
-                                AsyncThumbnail(url: item.stream.thumbnailURL, videoId: item.stream.id)
-                                    .frame(width: 96)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(item.stream.title)
-                                        .font(.subheadline.weight(.semibold))
-                                        .lineLimit(2)
-                                    Text(item.stream.author)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                }
-                                Spacer(minLength: 0)
-                                if index == app.player.queueIndex {
-                                    Image(systemName: "speaker.wave.2.fill")
-                                        .foregroundStyle(Theme.accent)
-                                }
-                            }
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
-                                app.player.removeFromQueue(at: index)
-                            } label: {
-                                Label("Dismiss", systemImage: "xmark.circle")
-                            }
-                        }
-                    }
-                }
-                .listStyle(.insetGrouped)
-            }
-        }
-        .navigationTitle("Up Next")
-        .navigationBarTitleDisplayMode(.inline)
+        QueueScreen()
     }
 }

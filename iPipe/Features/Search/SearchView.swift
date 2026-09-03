@@ -65,6 +65,7 @@ struct SearchView: View {
                 }
             }
             .navigationTitle("Search")
+            .toolbar { StandardToolbar() }
             .searchable(text: $model.query, prompt: "Search YouTube")
             .onSubmit(of: .search) {
                 model.hasSearched = false

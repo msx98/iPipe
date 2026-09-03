@@ -57,15 +57,7 @@ struct TrendingView: View {
                 }
             }
             .navigationTitle("Trending")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showDownloads = true
-                    } label: {
-                        Image(systemName: "arrow.down.circle")
-                    }
-                }
-            }
+            .toolbar { StandardToolbar() }
             .sheet(isPresented: $showDownloads) {
                 NavigationStack {
                     DownloadsView()

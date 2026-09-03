@@ -62,6 +62,7 @@ struct ChannelView: View {
         }
         .navigationTitle(model.channel?.name ?? channel.name)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar { StandardToolbar() }
         .task {
             await model.load(app: app, channel: channel)
             Log.url(YouTubeURLs.channel(model.channel ?? channel))

@@ -18,6 +18,10 @@ final class PlayerModel {
     var queue: [QueueItem] = []
     var queueIndex = 0
     private var endObserver: NSObjectProtocol?
+    private var timeObserver: Any?
+    var currentTime: TimeInterval = 0
+
+    var currentDuration: TimeInterval { max(duration, 1) }
 
     func playQueue(_ items: [QueueItem], startAt: Int = 0) {
         guard !items.isEmpty else { return }
@@ -45,6 +49,53 @@ final class PlayerModel {
 
     func onItemEnded() {
         playNext()
+    }
+
+    func seek(to time: TimeInterval) {
+        let seconds = max(0, time)
+        player?.seek(to: CMTime(seconds: seconds, preferredTimescale: 600),
+                     toleranceBefore: .zero,
+                     toleranceAfter: .zero)
+        currentTime = seconds
+        updateNowPlaying()
+    }
+
+    func skipForward() {
+        seek(to: currentTime + 10)
+    }
+
+    func skipBackward() {
+        seek(to: currentTime - 10)
+    }
+
+    func playPrevious() {
+        guard !queue.isEmpty else { return }
+        if queueIndex > 0 {
+            playFromQueue(at: queueIndex - 1)
+        } else {
+            seek(to: 0)
+        }
+    }
+
+    private func startTimeObserver() {
+        stopTimeObserver()
+        guard let player else { return }
+        timeObserver = player.addPeriodicTimeObserver(
+            forInterval: CMTime(seconds: 0.5, preferredTimescale: 600),
+            queue: .main
+        ) { [weak self] time in
+            MainActor.assumeIsolated {
+                self?.currentTime = time.seconds
+                self?.updateNowPlaying()
+            }
+        }
+    }
+
+    private func stopTimeObserver() {
+        if let timeObserver, let player {
+            player.removeTimeObserver(timeObserver)
+        }
+        timeObserver = nil
     }
 
     private func removeEndObserver() {
@@ -142,11 +193,13 @@ final class PlayerModel {
 
     func stop() {
         removeEndObserver()
+        stopTimeObserver()
         player?.pause()
         player?.replaceCurrentItem(with: nil)
         player = nil
         currentStream = nil
         isPlaying = false
+        currentTime = 0
         queue = []
         queueIndex = 0
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
@@ -234,6 +287,7 @@ final class PlayerModel {
             player = AVPlayer(playerItem: item)
         }
         player?.play()
+        startTimeObserver()
     }
 
     private func setupAudioSession() {
@@ -270,7 +324,8 @@ final class PlayerModel {
             MPMediaItemPropertyTitle: currentTitle,
             MPMediaItemPropertyArtist: currentAuthor,
             MPMediaItemPropertyPlaybackDuration: duration,
-            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0
+            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
+            MPNowPlayingInfoPropertyElapsedPlaybackTime: currentTime
         ]
         if let artwork = nowPlayingArtwork {
             info[MPMediaItemPropertyArtwork] = artwork

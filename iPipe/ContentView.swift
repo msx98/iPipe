@@ -50,6 +50,42 @@ struct ContentView: View {
             }
         }
         .ignoresSafeArea(.container, edges: .bottom)
+        .fullScreenCover(isPresented: $app.showQueueCover) {
+            NavigationStack {
+                QueueScreen()
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") {
+                                app.showQueueCover = false
+                            }
+                        }
+                    }
+            }
+        }
+        .sheet(isPresented: $app.showDownloadsSheet) {
+            NavigationStack {
+                DownloadsView()
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") {
+                                app.showDownloadsSheet = false
+                            }
+                        }
+                    }
+            }
+        }
+        .sheet(isPresented: $app.showHistorySheet) {
+            NavigationStack {
+                HistoryView()
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") {
+                                app.showHistorySheet = false
+                            }
+                        }
+                    }
+            }
+        }
     }
 }
 

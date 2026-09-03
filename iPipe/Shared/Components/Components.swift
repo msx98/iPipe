@@ -1,5 +1,64 @@
 import SwiftUI
 
+/// The shared top-right toolbar: Downloads, queue view, and history.
+struct StandardToolbar: ToolbarContent {
+    @Environment(AppModel.self) private var app
+
+    var body: some ToolbarContent {
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            Button {
+                app.showDownloadsSheet = true
+            } label: {
+                Image(systemName: "arrow.down.circle")
+            }
+            .accessibilityLabel("Downloads")
+
+            Button {
+                app.showQueueCover = true
+            } label: {
+                Image(systemName: "list.bullet")
+            }
+            .accessibilityLabel("Up Next")
+
+            Button {
+                app.showHistorySheet = true
+            } label: {
+                Image(systemName: "clock.arrow.circlepath")
+            }
+            .accessibilityLabel("History")
+        }
+    }
+}
+
+/// A view that renders the three standard toolbar buttons (covers cases where
+/// ToolbarContent can't be expressed directly, e.g. inside an item group).
+struct StandardToolbarGroup: View {
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        Button {
+            app.showDownloadsSheet = true
+        } label: {
+            Image(systemName: "arrow.down.circle")
+        }
+        .accessibilityLabel("Downloads")
+
+        Button {
+            app.showQueueCover = true
+        } label: {
+            Image(systemName: "list.bullet")
+        }
+        .accessibilityLabel("Up Next")
+
+        Button {
+            app.showHistorySheet = true
+        } label: {
+            Image(systemName: "clock.arrow.circlepath")
+        }
+        .accessibilityLabel("History")
+    }
+}
+
 struct StreamCard: View {
     let stream: StreamItem
     var showsChannel = true

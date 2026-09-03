@@ -52,6 +52,7 @@ List {
                         Image(systemName: "plus")
                     }
                 }
+                StandardToolbar()
             }
             .alert("New Playlist", isPresented: $model.showCreateAlert) {
                 TextField("Name", text: $model.newPlaylistName)
