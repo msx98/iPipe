@@ -1,0 +1,435 @@
+#!/usr/bin/env python3
+"""Sign iOS .app or .ipa inside-out using DevCert signing materials.
+
+Creates a fresh temp keychain each invocation — reliable, avoids state corruption.
+Only the root .app binary gets entitlements.
+
+Requires (defaults; override via DEVCERT env var):
+    legacy.p12          — legacy-format certificate
+    template.plist      — full entitlements from mobileprovision
+    *.mobileprovision   — provisioning profile
+
+Secrets come from the environment: DEVCERT (dir with the materials above) and
+P12_PASS (pkcs12 password). The iPipe Makefile sources these from the
+gitignored .env file.
+"""
+
+import argparse, os, re, shutil, subprocess, sys, tempfile
+from pathlib import Path
+
+DEVCERT = Path(os.environ.get("DEVCERT", str(Path.home() / "Documents/DevCert")))
+TEMPLATE = DEVCERT / "template.plist"
+LEGACY_P12 = DEVCERT / "legacy.p12"
+P12_PASS = os.environ.get("P12_PASS", "1")
+WWDR_URL = "https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer"
+
+
+def run(cmd, **kw):
+    return subprocess.run(cmd, capture_output=True, text=True, **kw)
+
+
+def die(msg):
+    print(f"ERROR: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def find_provision():
+    profiles = sorted(DEVCERT.glob("*.mobileprovision"))
+    if not profiles:
+        die(f"No .mobileprovision found in {DEVCERT}")
+    return str(profiles[0])
+
+
+def locate_main_binary(bundle):
+    name = os.path.basename(bundle)
+    name = re.sub(r"\.(app|framework|appex)$", "", name)
+    candidate = os.path.join(bundle, name)
+    if os.path.isfile(candidate):
+        return candidate
+    for f in os.listdir(bundle):
+        fp = os.path.join(bundle, f)
+        if os.path.isfile(fp) and not f.startswith("."):
+            return fp
+    die(f"No binary found in {bundle}")
+
+
+def find_nested_bundles(bundle):
+    items = []
+    frameworks_dir = os.path.join(bundle, "Frameworks")
+    if os.path.isdir(frameworks_dir):
+        for f in os.listdir(frameworks_dir):
+            fp = os.path.join(frameworks_dir, f)
+            if f.endswith(".framework") and os.path.isdir(fp):
+                items.append(fp)
+            elif f.endswith(".dylib") and os.path.isfile(fp):
+                items.append(fp)
+    plugins_dir = os.path.join(bundle, "PlugIns")
+    if os.path.isdir(plugins_dir):
+        for f in os.listdir(plugins_dir):
+            fp = os.path.join(plugins_dir, f)
+            if f.endswith(".appex") and os.path.isdir(fp):
+                items.append(fp)
+    return items
+
+
+def is_macho(path):
+    r = run(["file", path])
+    return "Mach-O" in r.stdout
+
+
+# ── Fresh keychain per invocation ──────────────────────────────────────
+
+def setup_keychain():
+    """Create temp keychain, import certs, return (keychain_path, identity_str)."""
+    kc = tempfile.mktemp(suffix=".keychain-db", prefix="sign_")
+    wwdr = os.path.join(tempfile.gettempdir(), "wwdr.cer")
+
+    # Download WWDR (cache it)
+    if not os.path.exists(wwdr):
+        run(["curl", "-sL", WWDR_URL, "-o", wwdr])
+
+    # Save current search list
+    prev = run(["security", "list-keychains", "-d", "user"]).stdout.strip()
+    prev_chains = prev.replace('"', '').split()
+
+    # Create keychain
+    run(["security", "create-keychain", "-p", "", kc])
+    run(["security", "unlock-keychain", "-p", "", kc])
+    run(["security", "set-keychain-settings", "-lut", "21600", kc])
+
+    # WWDR
+    run(["security", "add-certificates", "-k", kc, wwdr])
+
+    # Add to search list (with login)
+    run(["security", "list-keychains", "-d", "user", "-s", kc] + prev_chains)
+
+    # Import p12
+    r = run(["security", "import", str(LEGACY_P12), "-k", kc,
+             "-P", P12_PASS, "-T", "/usr/bin/codesign", "-f", "pkcs12"])
+    if r.returncode != 0:
+        die(f"Failed to import p12: {r.stderr}")
+
+    # Partition list
+    run(["security", "set-key-partition-list",
+         "-S", "apple-tool:,apple:,codesign:", "-s", "-k", "", kc])
+
+    # Find identity
+    r = run(["security", "find-identity", "-v", "-p", "codesigning", kc])
+    m = re.search(r'"(.+)"', r.stdout)
+    if m is None:
+        die("No signing identity found in keychain")
+    identity = m.group(1)
+
+    return kc, identity, prev_chains
+
+
+def teardown_keychain(kc, prev_chains):
+    """Restore search list, delete temp keychain."""
+    if prev_chains:
+        run(["security", "list-keychains", "-d", "user", "-s"] + prev_chains)
+    if os.path.exists(kc):
+        os.remove(kc)
+
+
+# ── Signing ─────────────────────────────────────────────────────────────
+
+# Keychain group expansion policy, set from CLI args in main().
+# KC_PREFIX: group name prefix after the team id ("" -> bare TEAMID.N).
+#   e.g. "com.kdt.livecontainer.shared" for LiveContainer.
+# KC_COUNT: number of numbered groups emitted (1..N), plus the unnumbered
+#   base group when a prefix is set.
+KC_PREFIX = ""
+KC_COUNT = 128
+# Associated domains policy, set from CLI args in main():
+#   None/"null" -> keep whatever associated-domains the binary already has
+#                  (fall back to template's value if binary is unsigned)
+#   ""          -> key absent in the signed entitlements
+#   otherwise   -> comma-separated concrete domains, e.g.
+#                  "applinks:foo.com,webcredentials:bar.com"
+ASSOC_DOMAINS = None
+# URL schemes policy, set from CLI args in main():
+#   None      -> leave Info.plist CFBundleURLTypes untouched
+#   ""        -> remove CFBundleURLTypes entirely
+#   otherwise -> comma-separated schemes (e.g. "livecontainer,myapp")
+URL_SCHEMES = None
+# Exported UTI declarations to add to Info.plist, set from CLI args in main().
+# Generic mechanism: each entry is a UTTypeIdentifier string; "{bundle-id}" is
+# replaced with the app's CFBundleIdentifier. Appended to (or created in)
+# UTExportedTypeDeclarations as a plain declaration with no conformance/tags.
+DECLARE_UTIS = []
+AD_KEY = "com.apple.developer.associated-domains"
+
+def fix_declare_utis(app_path):
+    import plistlib
+    if not DECLARE_UTIS:
+        return
+    plist = os.path.join(app_path, "Info.plist")
+    with open(plist, "rb") as f:
+        info = plistlib.load(f)
+    bundle_id = info.get("CFBundleIdentifier", "")
+    exported = info.get("UTExportedTypeDeclarations") or []
+    for ident in DECLARE_UTIS:
+        ident = ident.replace("{bundle-id}", bundle_id)
+        decl = {
+            "UTTypeConformsTo": [],
+            "UTTypeDescription": "Installed App",
+            "UTTypeIconFiles": [],
+            "UTTypeIdentifier": ident,
+            "UTTypeTagSpecification": {},
+        }
+        exported = [u for u in exported if u.get("UTTypeIdentifier") != ident]
+        exported.append(decl)
+        print(f"  -> Declared UTI {ident}")
+    info["UTExportedTypeDeclarations"] = exported
+    with open(plist, "wb") as f:
+        plistlib.dump(info, f)
+
+def existing_entitlements(binary):
+    """Return the entitlements dict currently embedded in `binary` ({} if none)."""
+    import plistlib
+    r = run(["codesign", "-d", "--entitlements", "-", "--xml", binary])
+    if r.returncode != 0 or not r.stdout.strip():
+        return {}
+    try:
+        return plistlib.loads(r.stdout.strip().encode())
+    except Exception:
+        return {}
+
+def fixed_entitlements(binary):
+    """Expand wildcard keychain-access-groups into concrete groups.
+    Wildcards are only valid inside the provisioning profile; a signed
+    binary must list concrete groups. Groups are named per the global
+    KC_PREFIX / KC_COUNT policy (see --keychain-prefix/--keychain-count)."""
+    import plistlib
+    with open(TEMPLATE, "rb") as f:
+        ents = plistlib.load(f)
+    changed = False
+
+    # Associated domains: the profile's "*" is invalid in a signed binary.
+    if ASSOC_DOMAINS is None or ASSOC_DOMAINS == "null":
+        cur = existing_entitlements(binary).get(AD_KEY)
+        if AD_KEY in ents and ents[AD_KEY] != cur:
+            changed = True
+            if cur is None:
+                del ents[AD_KEY]
+                print(f"  -> Removed {AD_KEY} (absent in binary)")
+            else:
+                ents[AD_KEY] = cur
+                print(f"  -> Kept {AD_KEY} from binary: {', '.join(cur)}")
+    elif ASSOC_DOMAINS == "":
+        if AD_KEY in ents:
+            del ents[AD_KEY]
+            print(f"  -> Removed {AD_KEY}")
+            changed = True
+    else:
+        domains = [d.strip() for d in ASSOC_DOMAINS.split(",") if d.strip()]
+        if ents.get(AD_KEY) != domains:
+            ents[AD_KEY] = domains
+            print(f"  -> Set {AD_KEY}: {', '.join(domains)}")
+            changed = True
+
+    kc = ents.get("keychain-access-groups")
+    if not kc or not any(g.endswith(".*") for g in kc):
+        if not changed:
+            return TEMPLATE
+        out = os.path.join(tempfile.gettempdir(), "sign-app-entitlements.plist")
+        with open(out, "wb") as f:
+            plistlib.dump(ents, f)
+        return out
+    team = ents.get("com.apple.developer.team-identifier")
+    if not team:
+        die("Cannot expand keychain-access-groups: no team-identifier in template")
+    expanded = []
+    for g in kc:
+        if g == f"{team}.*":
+            if KC_PREFIX:
+                expanded.append(f"{team}.{KC_PREFIX}")
+            expanded.extend(f"{team}.{KC_PREFIX + '.' if KC_PREFIX else ''}{i}"
+                            for i in range(1, KC_COUNT + 1))
+        else:
+            expanded.append(g)
+    ents["keychain-access-groups"] = expanded
+    desc = f"{team}.{KC_PREFIX}(.1..{KC_COUNT})" if KC_PREFIX else f"{team}.1..{KC_COUNT}"
+    print(f"  -> Expanded keychain-access-groups: {team}.* -> {desc}")
+    out = os.path.join(tempfile.gettempdir(), "sign-app-entitlements.plist")
+    with open(out, "wb") as f:
+        plistlib.dump(ents, f)
+    return out
+
+
+def sign_binary(binary, identity, keychain, is_root=False):
+    if binary.endswith(".dylib"):
+        r = run(["codesign", "--force", "--sign", identity,
+                 "--keychain", keychain, binary])
+        if r.returncode != 0:
+            die(f"Failed to sign dylib {binary}: {r.stderr}")
+        return
+    bundle = binary
+    parts = binary.split(os.sep)
+    for i in range(len(parts) - 1, -1, -1):
+        if parts[i].endswith((".app", ".framework", ".appex")):
+            bundle = os.sep.join(parts[:i + 1])
+            break
+    print(f"  Signing: {os.path.basename(bundle)}")
+    args = ["codesign", "--force", "--sign", identity, "--keychain", keychain]
+    if TEMPLATE.exists(): #and is_root:
+        args += ["--entitlements", fixed_entitlements(binary)]
+    r = run(args + [bundle])
+    if r.returncode != 0:
+        die(f"Failed to sign {bundle}: {r.stderr}")
+
+
+def sign_recursive(bundle, identity, keychain, is_root=True):
+    if os.path.isfile(bundle) and is_macho(bundle):
+        if bundle.endswith(".dylib"):
+            sign_binary(bundle, identity, keychain, is_root=False)
+            return
+        parent = os.path.dirname(bundle)
+        for ext in [".appex", ".framework"]:
+            if parent.endswith(ext):
+                bundle = parent
+                break
+    for nested in find_nested_bundles(bundle):
+        sign_recursive(nested, identity, keychain, is_root=False)
+    main_bin = locate_main_binary(bundle)
+    sign_binary(main_bin, identity, keychain, is_root=is_root)
+
+
+def fix_url_schemes(app_path):
+    """Rewrite CFBundleURLTypes in the app's Info.plist per URL_SCHEMES:
+    None -> untouched; "" -> key removed; otherwise comma-separated schemes
+    replace all existing ones in a single URL type entry."""
+    import plistlib
+    if URL_SCHEMES is None:
+        return
+    plist = os.path.join(app_path, "Info.plist")
+    with open(plist, "rb") as f:
+        info = plistlib.load(f)
+    if URL_SCHEMES == "":
+        if "CFBundleURLTypes" in info:
+            del info["CFBundleURLTypes"]
+            print("  -> Removed CFBundleURLTypes (no url schemes)")
+    else:
+        schemes = [s.strip() for s in URL_SCHEMES.split(",") if s.strip()]
+        info["CFBundleURLTypes"] = [{
+            "CFBundleURLName": schemes[0] if schemes else "",
+            "CFBundleURLSchemes": schemes,
+        }]
+        print(f"  -> Set CFBundleURLSchemes: {', '.join(schemes)}")
+    with open(plist, "wb") as f:
+        plistlib.dump(info, f)
+
+
+def process_app(app_path, keychain, identity):
+    fix_declare_utis(app_path)
+    fix_url_schemes(app_path)
+    provision = find_provision()
+    dst = os.path.join(app_path, "embedded.mobileprovision")
+    shutil.copy2(provision, dst)
+    print(f"  -> Embedded profile")
+    for appex in sorted(Path(app_path).glob("PlugIns/*.appex")):
+        dst2 = appex / "embedded.mobileprovision"
+        if not dst2.exists():
+            shutil.copy2(provision, str(dst2))
+            print(f"  -> Embedded profile in {appex.name}")
+
+    sign_recursive(app_path, identity, keychain)
+
+    print("  -> Verifying...")
+    r = run(["codesign", "--verify", "--deep", "--verbose=2", app_path])
+    if r.returncode != 0:
+        die(f"Verification failed:\n{r.stderr}")
+    print("  ok  Valid signature")
+
+    r = run(["codesign", "-dvvv", app_path])
+    for line in r.stdout.splitlines():
+        if "Identifier=" in line:
+            print(f"  Identifier: {line.split('=',1)[1]}")
+        if "Authority=" in line:
+            print(f"  Authority: {line.split('=',1)[1]}")
+
+
+def main():
+    global KC_PREFIX, KC_COUNT, ASSOC_DOMAINS, URL_SCHEMES
+    p = argparse.ArgumentParser(description="Sign iOS .app or .ipa with DevCert")
+    p.add_argument("target", nargs="?", help="Path to .app bundle or .ipa file")
+    p.add_argument("--identity-only", action="store_true")
+    p.add_argument("--keychain-prefix", default="",
+                   help="Prefix for expanded keychain groups after TEAMID "
+                        "(e.g. com.kdt.livecontainer.shared). Empty: bare TEAMID.N. "
+                        "Only used when the profile entitlements contain a wildcard group.")
+    p.add_argument("--keychain-count", type=int, default=128,
+                   help="Number of numbered keychain groups to emit (default 128)")
+    p.add_argument("--associated-domains", default=None, metavar="SPEC",
+                   help="'null' (default) keeps whatever associated-domains the "
+                        "binary already has; '' removes the key; otherwise "
+                        "comma-separated domains "
+                        "(e.g. 'applinks:foo.com,webcredentials:bar.com').")
+    p.add_argument("--url-schemes", default=None, metavar="SPEC",
+                   help="'' removes CFBundleURLTypes from Info.plist; otherwise "
+                        "comma-separated custom URL schemes (e.g. "
+                        "'livecontainer,lc2') replace the existing ones. "
+                        "Unspecified: leave Info.plist untouched.")
+    p.add_argument("--declare-uti", action="append", default=None, metavar="IDENT",
+                   help="Add an exported UTI declaration to Info.plist (repeatable). "
+                        "'{bundle-id}' in IDENT is replaced with the app's bundle id. "
+                        "e.g. --declare-uti 'io.sidestore.Installed.{bundle-id}'")
+    args = p.parse_args()
+    global DECLARE_UTIS
+    KC_PREFIX = args.keychain_prefix
+    KC_COUNT = args.keychain_count
+    ASSOC_DOMAINS = args.associated_domains
+    URL_SCHEMES = args.url_schemes
+    DECLARE_UTIS = args.declare_uti or []
+
+    if args.identity_only:
+        kc, ident, prev = setup_keychain()
+        print(ident)
+        teardown_keychain(kc, prev)
+        return
+
+    if not args.target:
+        p.print_help()
+        sys.exit(1)
+
+    target = args.target
+
+    # Handle .ipa
+    if target.endswith(".ipa"):
+        tmpdir = tempfile.mkdtemp(prefix="sign_ipa_")
+        run(["unzip", "-qo", target, "-d", tmpdir])
+        apps = list(Path(tmpdir).glob("Payload/*.app"))
+        if not apps:
+            die("No .app found in IPA payload")
+        app_path = str(apps[0])
+        print(f"  Extracted: {app_path}")
+
+        kc, identity, prev = setup_keychain()
+        print(f"Identity: {identity}")
+        try:
+            process_app(app_path, kc, identity)
+        finally:
+            teardown_keychain(kc, prev)
+
+        run(["rm", "-f", target])
+        r = run(["zip", "-qr", target, "Payload"], cwd=tmpdir)
+        if r.returncode != 0:
+            die(f"Failed to repackage IPA `cd '{tmpdir}' && zip -qr '{target}' Payload`: {r.stderr}")
+        print(f"  -> Repackaged: {target}")
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        return
+
+    # Handle .app
+    if not os.path.isdir(target) or not os.path.isfile(os.path.join(target, "Info.plist")):
+        die(f"{target} is not an .app bundle (no Info.plist)")
+
+    kc, identity, prev = setup_keychain()
+    print(f"Identity: {identity}")
+    try:
+        process_app(target, kc, identity)
+    finally:
+        teardown_keychain(kc, prev)
+
+
+if __name__ == "__main__":
+    main()

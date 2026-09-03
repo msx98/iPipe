@@ -1,8 +1,9 @@
 # iPipe — generic iOS app template
-# Pipeline: make build -> make install -> make launch
+# Pipeline: make build -> make signed -> make install -> make launch
 #
 # Output layout under build/:
 #   app/<arch>/$(APP_NAME).app         staged, UNSIGNED iPipe.app (+ DerivedData)
+#   app/signed/$(APP_NAME).app  SIGNED iPipe.app produced by `make signed`
 #   app/.commit_hash            git commit the staged app was built from
 #
 # ARCH=simulator builds for the iOS Simulator (no signing) and installs
@@ -11,12 +12,20 @@
 # Documents/ after install (simctl data container on sims, house_arrest/AFC
 # via pymobiledevice3 on devices).
 
+# Local environment overrides — this file is gitignored; keep machine-specific
+# secrets (DEVCERT, P12_PASS, TEAM_ID, ...) there, out of the repo.
+# Make syntax: KEY=value, no quotes/spaces/$.
+ifneq ($(wildcard .env),)
+include .env
+endif
+
 APP_NAME := iPipe
 XC_PROJECT := iPipe.xcodeproj
 
 BUILDDIR := $(abspath build)
 APPROOT := $(BUILDDIR)/app
 DERIVED := $(APPROOT)/DerivedData
+SIGNED_APP := $(APPROOT)/signed/$(APP_NAME).app
 
 # Target: device (default) or simulator. Each arch stages its own app so
 # switching ARCH never reuses the other's stale product.
@@ -54,6 +63,14 @@ BUNDLE_ID ?= ax.lx.ipipe
 #   make install TEAM_ID=<your-team-id>
 TEAM_ID ?= A1111ABCDE
 
+# Signing: `make signed` stages the app into build/app/signed/ and hands it to
+# SIGN_CMD (default: tools/sign-app, which embeds the provisioning profile and
+# signs nested code inside-out with the dev identity). The pkcs12 password and
+# DevCert directory normally live in .env.
+DEVCERT ?= $(HOME)/Documents/DevCert
+P12_PASS ?= 1
+SIGN_CMD ?= $(CURDIR)/tools/sign-app --keychain-prefix ax.lx.ipipe
+
 # Tag name used by `make release` (default: v<short commit sha>). The CI
 # workflow builds and publishes a GitHub Release for tags matching v*.
 #   make release RELEASE_TAG=v0.2.0
@@ -69,14 +86,15 @@ COOKIESFILE ?=
 # devices over the house_arrest/AFC service).
 PMD_PYTHON ?= $(shell for p in $(HOME)/.venv/bin/python $(HOME)/.venv/bin/python3 python3; do "$$p" -c 'import pymobiledevice3' >/dev/null 2>&1 && { echo "$$p"; break; }; done)
 
-.PHONY: help build install launch release clean
+.PHONY: help build signed install launch release clean
 
 help:
 	@echo "Targets:"
 	@grep -E '^## ' $(MAKEFILE_LIST) | sed -e 's/^## /  /'
 
 ## build    — build Release/unsigned into build/app/<ARCH>/ (git-commit driven)
-## install  — device: build + devicectl install on $(DEVICE)
+## signed   — stage + sign into build/app/signed/ via SIGN_CMD (default sign-app)
+## install  — device: build + sign + devicectl install on $(DEVICE)
 ##            simulator: build + simctl install on $(SIM)
 ##            COOKIESFILE=<path> additionally copies the file into the app's
 ##            Documents/ (as cookies.txt) on the installed target; the app
@@ -120,10 +138,25 @@ build:
 	@git rev-parse --short=12 HEAD > "$(APPROOT)/.commit_hash"
 	@echo "=== Commit: $$(cat "$(APPROOT)/.commit_hash") ==="
 
+# Copy the staged app to build/app/signed/ and hand it to SIGN_CMD.
+# Simulator apps run unsigned; only invoke SIGN_CMD for device builds.
+signed: build
 ifneq ($(ARCH),simulator)
-install: build
-	@echo "=== Installing $(APP_PATH) on $(DEVICE) ==="
-	xcrun devicectl device install app "$(APP_PATH)" --device "$(DEVICE)"
+	@echo "=== Signing via $$(echo $(SIGN_CMD) | awk '{print $$1}') ==="
+	@set -e; \
+	rm -rf "$(APPROOT)/signed"; \
+	mkdir -p "$(APPROOT)/signed"; \
+	cp -R "$(APP_PATH)" "$(SIGNED_APP)"; \
+	DEVCERT='$(DEVCERT)' P12_PASS='$(P12_PASS)' $(SIGN_CMD) "$(SIGNED_APP)"; \
+	echo "=== Signed app in $(APPROOT)/signed ==="
+else
+	@echo "=== ARCH=simulator: signing skipped ($(APP_PATH)) ==="
+endif
+
+ifneq ($(ARCH),simulator)
+install: signed
+	@echo "=== Installing $(SIGNED_APP) on $(DEVICE) ==="
+	xcrun devicectl device install app "$(SIGNED_APP)" --device "$(DEVICE)"
 ifneq ($(strip $(COOKIESFILE)),)
 	@set -e; \
 	case "$(DEVICE)" in \
