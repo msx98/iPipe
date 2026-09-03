@@ -113,6 +113,7 @@ final class PlaylistDetailModel {
     var shareText = ""
     var showRemoveWatchedConfirm = false
     var isWorking = false
+    var isEditing = false
 
     let playlistID: String
 
@@ -245,28 +246,29 @@ struct PlaylistDetailScreen: View {
 
     @ViewBuilder
     private func detailContent(_ playlist: LocalPlaylist) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
+        List {
+            Section {
                 headerCard(playlist)
-                List {
-                    ForEach(Array(playlist.streams.enumerated()), id: \.element.id) { _, item in
-                        NavigationLink(value: item.stream) {
-                            streamRow(item.stream)
-                        }
-                    }
-                    .onMove { offsets, destination in
-                        app.playlists.moveItem(from: offsets, to: destination, in: playlist)
-                    }
-                    .onDelete { offsets in
-                        let items = offsets.map { playlist.streams[$0] }
-                        for item in items {
-                            app.playlists.removeItem(item, from: playlist)
-                        }
+            }
+            Section {
+                ForEach(Array(playlist.streams.enumerated()), id: \.element.id) { _, item in
+                    NavigationLink(value: item.stream) {
+                        streamRow(item.stream)
                     }
                 }
-                .listStyle(.plain)
+                .onMove { offsets, destination in
+                    app.playlists.moveItem(from: offsets, to: destination, in: playlist)
+                }
+                .onDelete { offsets in
+                    let items = offsets.map { playlist.streams[$0] }
+                    for item in items {
+                        app.playlists.removeItem(item, from: playlist)
+                    }
+                }
             }
         }
+        .listStyle(.insetGrouped)
+        .environment(\.editMode, .constant(model.isEditing ? .active : .inactive))
         .overlay(alignment: .center) {
             if model.isWorking {
                 ProgressView()
@@ -291,11 +293,6 @@ struct PlaylistDetailScreen: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
-        .padding(.horizontal)
-        .padding(.top, 8)
     }
 
     private func streamRow(_ stream: StreamItem) -> some View {
@@ -316,6 +313,10 @@ struct PlaylistDetailScreen: View {
 
     private var playlistToolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .topBarTrailing) {
+            Button(model.isEditing ? "Done" : "Edit") {
+                model.isEditing.toggle()
+            }
+
             Menu {
                 Button {
                     Task { await model.playAll(app: app) }
