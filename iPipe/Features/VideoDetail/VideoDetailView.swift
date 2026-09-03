@@ -55,7 +55,7 @@ struct VideoDetailView: View {
                 detailContent
             }
         }
-        .navigationTitle(model.stream?.author ?? stream.author)
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await model.load(app: app, stream: stream)
