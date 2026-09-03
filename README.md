@@ -17,29 +17,8 @@ Note that sign-ins will only work if you set a keychain access group: $TEAMID.ax
   <img src="screenshots/screenshot-2.png" width="300" alt="iPipe screenshot 2" />
 </p>
 
-## Installing
-
-iPipe ships as an **unsigned** IPA (every Release on the Releases page, and as an artifact on each build). Because it's unsigned you need to sign it with your own Apple ID before it will run on a device. Two common ways:
-
-### Sign it yourself
-1. Download `iPipe-unsigned.ipa` from the latest [Release](https://github.com/msx98/iPipe/releases).
-2. Sign and install with your own certificate — e.g. with [AltStore](https://altstore.io), [Sideloadly](https://sideloadly.io), [SideStore](http://sidestore.io), or `codesign` + a provisioning profile on the command line.
-3. In iOS Settings → General → VPN & Device Management (or *Profiles & Device Management*), trust your developer certificate before the first launch.
-
-### Or use Feather
-
-[Feather](https://feather.cf) is an on-device signing app: download `iPipe-unsigned.ipa`, open it in Feather, add your certificates under *Certificates & Profiles*, and it will sign + install directly.
-
-### Simulator (no signing needed)
-The build itself runs fine unsigned on a simulator:
-
-```sh
-make ARCH=simulator install   # builds and installs into the booted simulator
-```
-
 ## Features
 
-- **Trending** feed, **Search** (with suggestions + All/Videos/Channels/Playlists filters), **Subscriptions**, and **Settings** tabs
 - Full **video detail/player** screen — metadata, description, related videos, and a quality picker
 - **Downloads** — video (≤1080p) and audio (itag 140), with per-part progress, saved under `Documents/Downloads/`
 - Picture-in-style background audio playback (synthetic HLS manifests via [`HLSResourceLoader`/`HLSBuilder`](iPipe/Core/Player/PlayerModel.swift))
@@ -47,15 +26,13 @@ make ARCH=simulator install   # builds and installs into the booted simulator
 - Interchangeable backend: real **InnerTube** extraction vs an offline **Sample** data source (switch in Settings)
 - Deep links: opening `ipipe://<youtube-video-id>` jumps straight into the player
 
-## Requirements
-
-- macOS with Xcode (iOS 26.x SDK works; deployment target is iOS 18)
-- A booted simulator (`ARCH=simulator`) or a paired iPhone (`ARCH=device`)
-- Connected iPhone installs need ad-hoc/sideload signing (see note below) if not jailbroken
-
 ## Build & install
 
-The Makefile drives everything; unsigned builds only.
+iOS 26.x SDK works, deployment target is iOS 18.
+
+macOS is not needed, you can simply fork this repo, clone, modify and `make release`, the IPA will be generated automatically on your GitHub fork.
+
+Otherwise, Makefile drives everything; unsigned builds only.
 
 ```sh
 make build                  # Release unsigned build into build/app/<ARCH>/
