@@ -6,6 +6,11 @@ on:
     tags:
       - 'v*'
       - 'release-*'
+    # Path filters are only evaluated for branch pushes; tag pushes
+    # skip them, so v*/release-* tags always build.
+    paths:
+      - 'iPipe/**'
+      - 'iPipe.xcodeproj/**'
   workflow_dispatch:
 
 concurrency:
