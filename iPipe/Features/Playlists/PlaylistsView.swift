@@ -113,7 +113,8 @@ final class PlaylistDetailModel {
     var shareText = ""
     var showRemoveWatchedConfirm = false
     var isWorking = false
-    var isEditing = false
+    var pendingDeleteItem: LocalPlaylistItem?
+    var removeItemDialogPresented = false
 
     let playlistID: String
 
@@ -124,6 +125,13 @@ final class PlaylistDetailModel {
     /// Fetches the playlist currently stored in the manager (nil if gone).
     func refreshPlaylist(app: AppModel) -> LocalPlaylist? {
         app.playlists.playlists.first { $0.id == playlistID }
+    }
+
+    /// Performs the confirmed removal of an item read from the list.
+    func deletePendingItem(app: AppModel) {
+        guard let item = pendingDeleteItem, let playlist = refreshPlaylist(app: app) else { return }
+        app.playlists.removeItem(item, from: playlist)
+        pendingDeleteItem = nil
     }
 
     func rename(to name: String, app: AppModel) {
@@ -259,13 +267,22 @@ struct PlaylistDetailScreen: View {
         } message: {
             Text("Remove videos you've already watched from this playlist?")
         }
+        .alert("Remove from playlist?", isPresented: $model.removeItemDialogPresented) {
+            Button("Remove", role: .destructive) {
+                model.deletePendingItem(app: app)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This video will be removed from the playlist.")
+        }
     }
 
     @ViewBuilder
     private func detailContent(_ playlist: LocalPlaylist) -> some View {
         List {
             Section {
-                headerCard(playlist)
+                headerRow(playlist)
+                    .listRowInsets(EdgeInsets())
             }
             Section {
                 ForEach(Array(playlist.streams.enumerated()), id: \.element.id) { index, item in
@@ -276,20 +293,20 @@ struct PlaylistDetailScreen: View {
                         streamRow(item.stream)
                     }
                     .buttonStyle(.plain)
+                    .listRowInsets(EdgeInsets())
                 }
                 .onMove { offsets, destination in
                     app.playlists.moveItem(from: offsets, to: destination, in: playlist)
                 }
                 .onDelete { offsets in
                     let items = offsets.map { playlist.streams[$0] }
-                    for item in items {
-                        app.playlists.removeItem(item, from: playlist)
-                    }
+                    model.pendingDeleteItem = items.first
+                    model.removeItemDialogPresented = true
                 }
             }
         }
-        .listStyle(.insetGrouped)
-        .environment(\.editMode, .constant(model.isEditing ? .active : .inactive))
+        .listStyle(.plain)
+        .environment(\.editMode, .constant(.active))
         .overlay(alignment: .center) {
             if model.isWorking {
                 ProgressView()
@@ -298,46 +315,60 @@ struct PlaylistDetailScreen: View {
     }
 
     @ViewBuilder
-    private func headerCard(_ playlist: LocalPlaylist) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+    private func headerRow(_ playlist: LocalPlaylist) -> some View {
+        HStack(spacing: 10) {
             Button {
                 model.newName = playlist.name
                 model.showRenameAlert = true
             } label: {
-                Text(playlist.name)
-                    .font(.title3.weight(.bold))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
+                Image(systemName: "pencil")
             }
             .buttonStyle(.plain)
-            Text("\(playlist.streamCount) items · \(playlist.totalDuration.durationText)")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(playlist.name)
+                    .font(.title3.weight(.bold))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Text("\(playlist.streamCount) items · \(playlist.totalDuration.durationText)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+            Button {
+                Task { await model.playAll(app: app) }
+            } label: {
+                Image(systemName: "play.circle.fill")
+                    .font(.title2)
+            }
+            .buttonStyle(.plain)
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 
     private func streamRow(_ stream: StreamItem) -> some View {
         HStack(spacing: 12) {
             AsyncThumbnail(url: stream.thumbnailURL, videoId: stream.id)
+                .frame(width: 140)
             VStack(alignment: .leading, spacing: 2) {
                 Text(stream.title)
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(2)
+                    .truncationMode(.tail)
                 Text(stream.author)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
             Spacer(minLength: 0)
         }
         .contentShape(Rectangle())
+        .padding(.leading, 16)
+        .padding(.trailing, 8)
     }
 
     private var playlistToolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .topBarTrailing) {
-            Button(model.isEditing ? "Done" : "Edit") {
-                model.isEditing.toggle()
-            }
-
             Menu {
                 Button {
                     Task { await model.playAll(app: app) }

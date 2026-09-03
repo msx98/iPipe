@@ -2,6 +2,7 @@ import AVFoundation
 import AVKit
 import MediaPlayer
 import Observation
+import UIKit
 
 @Observable
 @MainActor
@@ -120,6 +121,10 @@ final class PlayerModel {
         currentLabel = chosen.label
         isPlaying = true
         updateNowPlaying()
+        nowPlayingArtwork = nil
+        if stream.thumbnailURL != nil {
+            Task { await loadArtwork(for: stream) }
+        }
         NSLog("iPipe: playing %@ via %@ (%@)", stream.id, chosen.kind.rawValue, chosen.label)
     }
 
@@ -261,12 +266,30 @@ final class PlayerModel {
     }
 
     private func updateNowPlaying() {
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = [
+        var info: [String: Any] = [
             MPMediaItemPropertyTitle: currentTitle,
             MPMediaItemPropertyArtist: currentAuthor,
             MPMediaItemPropertyPlaybackDuration: duration,
             MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0
         ]
+        if let artwork = nowPlayingArtwork {
+            info[MPMediaItemPropertyArtwork] = artwork
+        }
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+    }
+
+    /// Cached artwork (thumbnail) shown on the lock screen / Control Center.
+    private var nowPlayingArtwork: MPMediaItemArtwork?
+
+    func loadArtwork(for stream: StreamItem) async {
+        guard let url = stream.thumbnailURL else { return }
+        guard let data = try? Data(contentsOf: url),
+              let image = UIImage(data: data) else { return }
+        let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+        nowPlayingArtwork = artwork
+        var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+        info[MPMediaItemPropertyArtwork] = artwork
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
 
     private func localCompositionItem(video: URL, audio: URL, fallbackDuration: TimeInterval) async -> AVPlayerItem? {
