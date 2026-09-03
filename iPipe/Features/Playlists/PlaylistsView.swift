@@ -179,6 +179,15 @@ final class PlaylistDetailModel {
         }
     }
 
+    /// Fills the latent queue with the whole playlist and starts it at the
+    /// tapped item, so backgrounding the playlist leaves it as “up next”.
+    func playItem(at index: Int, app: AppModel) async {
+        guard let playlist = refreshPlaylist(app: app) else { return }
+        let queue = await buildQueue(app: app)
+        guard index < queue.count else { return }
+        app.player.playQueue(queue, startAt: index)
+    }
+
     func export(app: AppModel) {
         guard let playlist = refreshPlaylist(app: app) else { return }
         shareText = app.playlists.export(playlist, mode: .withTitles)
@@ -211,13 +220,21 @@ struct PlaylistDetailScreen: View {
 
     var body: some View {
         Group {
-            if let currentPlaylist = playlist, !currentPlaylist.streams.isEmpty {
-                detailContent(currentPlaylist)
+            if let currentPlaylist = playlist {
+                if currentPlaylist.streams.isEmpty {
+                    ContentUnavailableView(
+                        "Empty Playlist",
+                        systemImage: "list.bullet",
+                        description: Text("Add videos from any video page to build this playlist.")
+                    )
+                } else {
+                    detailContent(currentPlaylist)
+                }
             } else {
                 ContentUnavailableView(
                     "Playlist unavailable",
-                    systemImage: "list.bullet",
-                    description: Text("This playlist no longer exists or is empty.")
+                    systemImage: "exclamationmark.triangle",
+                    description: Text("This playlist no longer exists.")
                 )
             }
         }
@@ -251,10 +268,13 @@ struct PlaylistDetailScreen: View {
                 headerCard(playlist)
             }
             Section {
-                ForEach(Array(playlist.streams.enumerated()), id: \.element.id) { _, item in
+                ForEach(Array(playlist.streams.enumerated()), id: \.element.id) { index, item in
                     NavigationLink(value: item.stream) {
                         streamRow(item.stream)
                     }
+                    .simultaneousGesture(TapGesture().onEnded {
+                        Task { await model.playItem(at: index, app: app) }
+                    })
                 }
                 .onMove { offsets, destination in
                     app.playlists.moveItem(from: offsets, to: destination, in: playlist)

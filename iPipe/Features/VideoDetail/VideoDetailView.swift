@@ -41,6 +41,7 @@ struct VideoDetailView: View {
     @State private var showAddToPlaylist = false
     @State private var showNewPlaylistAlert = false
     @State private var newPlaylistName = ""
+    @State private var showQueue = false
 
     var body: some View {
         Group {
@@ -69,6 +70,13 @@ struct VideoDetailView: View {
                     downloadMenuItem(kind: .audio)
                 } label: {
                     Image(systemName: "arrow.down.circle")
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showQueue = true
+                } label: {
+                    Image(systemName: "list.bullet")
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
@@ -133,6 +141,19 @@ struct VideoDetailView: View {
                 newPlaylistName = ""
             }
             Button("Cancel", role: .cancel) {}
+        }
+        .sheet(isPresented: $showQueue) {
+            NavigationStack {
+                QueueView()
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") {
+                                showQueue = false
+                            }
+                        }
+                    }
+            }
+            .presentationDetents([.medium, .large])
         }
     }
 
@@ -302,5 +323,63 @@ struct VideoDetailView: View {
     private func isAlreadyInPlaylist(_ playlist: LocalPlaylist) -> Bool {
         let target = model.stream ?? stream
         return playlist.streams.contains(where: { $0.stream.id == target.id })
+    }
+}
+
+/// Up-next queue showing the latent playback queue. Mirrors the playlist item
+/// interface (thumbnail, title, author), with “Dismiss” in place of delete:
+/// dismissing the active item starts the next one or stops when empty.
+struct QueueView: View {
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        Group {
+            if app.player.queue.isEmpty {
+                ContentUnavailableView(
+                    "Queue is empty",
+                    systemImage: "list.bullet",
+                    description: Text("Videos you play and playlists you background land here.")
+                )
+            } else {
+                List {
+                    ForEach(Array(app.player.queue.enumerated()), id: \.element.stream.id) { index, item in
+                        Button {
+                            app.player.playFromQueue(at: index)
+                        } label: {
+                            HStack(spacing: 12) {
+                                AsyncThumbnail(url: item.stream.thumbnailURL, videoId: item.stream.id)
+                                    .frame(width: 96)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(item.stream.title)
+                                        .font(.subheadline.weight(.semibold))
+                                        .lineLimit(2)
+                                    Text(item.stream.author)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                                Spacer(minLength: 0)
+                                if index == app.player.queueIndex {
+                                    Image(systemName: "speaker.wave.2.fill")
+                                        .foregroundStyle(Theme.accent)
+                                }
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                app.player.removeFromQueue(at: index)
+                            } label: {
+                                Label("Dismiss", systemImage: "xmark.circle")
+                            }
+                        }
+                    }
+                }
+                .listStyle(.insetGrouped)
+            }
+        }
+        .navigationTitle("Up Next")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }

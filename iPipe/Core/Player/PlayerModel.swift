@@ -94,6 +94,16 @@ final class PlayerModel {
     func play(stream: StreamItem, formats: [VideoFormat], prefer: VideoFormat?) {
         setupAudioSession()
         registerRemoteCommands()
+        // Keep the latent queue consistent: a brand-new video collapses the queue
+        // to just that video; re-selecting the current one (e.g. quality change)
+        // updates its entry in place without disturbing the rest of the queue.
+        if queue.isEmpty || queueIndex >= queue.count || queue[queueIndex].stream.id != stream.id {
+            queue = [QueueItem(stream: stream, formats: formats, prefer: prefer)]
+            queueIndex = 0
+        } else {
+            queue[queueIndex].formats = formats
+            queue[queueIndex].prefer = prefer
+        }
         currentTitle = stream.title
         currentAuthor = stream.author
         currentStream = stream
@@ -126,12 +136,47 @@ final class PlayerModel {
     }
 
     func stop() {
+        removeEndObserver()
         player?.pause()
         player?.replaceCurrentItem(with: nil)
         player = nil
         currentStream = nil
         isPlaying = false
+        queue = []
+        queueIndex = 0
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+    }
+
+    /// Jumps the queue to the given index and plays that item (re-registering the
+    /// end-of-stream trigger so the rest of the queue keeps advancing).
+    func playFromQueue(at index: Int) {
+        guard index >= 0, index < queue.count else { return }
+        queueIndex = index
+        let item = queue[index]
+        play(stream: item.stream, formats: item.formats, prefer: item.prefer)
+        registerEndObserver()
+    }
+
+    /// Removes an item from the queue. If it was the active video, playback moves
+    /// to the next item, or stops entirely when the queue becomes empty.
+    func removeFromQueue(at index: Int) {
+        guard index >= 0, index < queue.count else { return }
+        let wasActive = index == queueIndex
+        removeEndObserver()
+        if index < queueIndex { queueIndex -= 1 }
+        queue.remove(at: index)
+        if wasActive {
+            if !queue.isEmpty {
+                queueIndex = min(index, queue.count - 1)
+                let item = queue[queueIndex]
+                play(stream: item.stream, formats: item.formats, prefer: item.prefer)
+                registerEndObserver()
+            } else {
+                queue = []
+                queueIndex = 0
+                stop()
+            }
+        }
     }
 
     func reactivateAudioSession() {

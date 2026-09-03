@@ -22,12 +22,22 @@ struct VideoPlayerOverlay: View {
                             }
                             .navigationDestination(for: ChannelItem.self) { ChannelView(channel: $0) }
                             .toolbar {
-                                ToolbarItemGroup(placement: .topBarLeading) {
+                                ToolbarItem(placement: .topBarLeading) {
                                     Button { close() } label: {
                                         Image(systemName: "xmark")
                                     }
-                                    Spacer()
+                                }
+                                ToolbarItem(placement: .principal) {
                                     DragHandle()
+                                        .contentShape(Rectangle())
+                                        .gesture(
+                                            DragGesture(minimumDistance: 10)
+                                                .onEnded { value in
+                                                    if value.translation.height > 60 || value.predictedEndTranslation.height > 60 {
+                                                        collapse()
+                                                    }
+                                                }
+                                        )
                                 }
                             }
                     }
