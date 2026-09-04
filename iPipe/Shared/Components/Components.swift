@@ -59,10 +59,12 @@ struct StandardToolbarGroup: View {
     }
 }
 
-/// A stream row that opens the video on tap and enqueues it on long press.
+/// A stream row that opens the video on tap and shows the "Add to playlist"
+/// dialog on long press.
 struct StreamCell: View {
     @Environment(AppModel.self) private var app
     let stream: StreamItem
+    @State private var showAddToPlaylist = false
 
     var body: some View {
         Button {
@@ -72,9 +74,12 @@ struct StreamCell: View {
         }
         .buttonStyle(.plain)
         .simultaneousGesture(LongPressGesture(minimumDuration: 0.4).onEnded { _ in
-            app.player.enqueue(stream)
+            showAddToPlaylist = true
         })
-        .accessibilityHint("Long press to add to up next queue")
+        .sheet(isPresented: $showAddToPlaylist) {
+            AddToPlaylistSheet(stream: stream)
+        }
+        .accessibilityHint("Long press to add to a playlist")
     }
 }
 

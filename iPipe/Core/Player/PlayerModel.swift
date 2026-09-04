@@ -63,21 +63,6 @@ final class PlayerModel {
         playNext()
     }
 
-    /// Adds a stream to the end of the queue without interrupting playback.
-    /// If nothing is playing yet, it starts playing it immediately.
-    func enqueue(_ stream: StreamItem, formats: [VideoFormat]? = nil) {
-        if queue.isEmpty || !hasItem {
-            let item = QueueItem(stream: stream, formats: formats ?? [], prefer: nil)
-            playQueue([item])
-        } else {
-            let item = QueueItem(stream: stream, formats: formats ?? [], prefer: nil)
-            queue.append(item)
-            if queueFinished {
-                queueFinished = false
-            }
-        }
-    }
-
     /// Restarts the queue from the first item (used from the finished state).
     func restartQueue() {
         guard !queue.isEmpty else { return }
