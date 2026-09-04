@@ -80,7 +80,9 @@ struct VideoDetailView: View {
                         Text("Related").font(.headline)
                         LazyVStack(spacing: 14) {
                             ForEach(model.related) { related in
-                                NavigationLink(value: related) {
+                                Button {
+                                    app.focusedVideo = related
+                                } label: {
                                     HStack(spacing: 10) {
                                         AsyncThumbnail(url: related.thumbnailURL, videoId: related.id)
                                             .frame(width: 140)
@@ -250,13 +252,4 @@ struct VideoDetailView: View {
         }
     }
 
-
-}
-
-/// Re-exported queue view (full screen + sticky controls) for use in the
-/// video detail sheet; the shared full-screen version lives in QueueScreen.swift.
-struct QueueView: View {
-    var body: some View {
-        QueueScreen()
-    }
 }

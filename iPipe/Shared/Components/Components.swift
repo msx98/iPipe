@@ -59,6 +59,22 @@ struct StandardToolbarGroup: View {
     }
 }
 
+/// Confirmation alert for clearing watch history, shared by the Settings "Data"
+/// section and the History popup so both use the same routine.
+struct ClearHistoryConfirmation: ViewModifier {
+    @Binding var isPresented: Bool
+    let onClear: () -> Void
+
+    func body(content: Content) -> some View {
+        content.alert("Clear watch history?", isPresented: $isPresented) {
+            Button("Clear", role: .destructive) { onClear() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Your watch history will be emptied.")
+        }
+    }
+}
+
 /// A stream row that opens the video on tap and shows the "Add to playlist"
 /// dialog on long press.
 struct StreamCell: View {

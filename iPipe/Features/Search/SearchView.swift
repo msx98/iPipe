@@ -79,7 +79,6 @@ struct SearchView: View {
                     Task { await model.runSearch(app: app) }
                 }
             }
-            .navigationDestination(for: StreamItem.self) { VideoDetailView(stream: $0) }
             .navigationDestination(for: ChannelItem.self) { ChannelView(channel: $0) }
         }
     }

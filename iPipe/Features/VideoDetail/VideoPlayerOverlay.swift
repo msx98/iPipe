@@ -1,62 +1,50 @@
 import SwiftUI
 
+/// Full-screen, focused video page. This is the single video detail experience
+/// in the app — every entry point (trending, search, history, playlists,
+/// channels, related videos) lands here so the top header is always the same:
+/// Back + X on the leading edge, Downloads / History / Up Next on the trailing.
+///
+/// Collapsing (down-swipe or Back) dismisses the overlay entirely and hands off
+/// to the shared `MiniPlayerBar` in `ContentView`, so there is only one
+/// miniplayer style in the app and it never obscures scroll content.
 struct VideoPlayerOverlay: View {
     @Environment(AppModel.self) private var app
     let stream: StreamItem
-    @State private var expanded = true
     @State private var dragOffset: CGFloat = 0
 
     var body: some View {
         GeometryReader { geo in
-            let bottomPad = 88 + geo.safeAreaInsets.bottom
-            ZStack(alignment: .bottom) {
+            ZStack {
                 Color.black
                     .ignoresSafeArea(.container)
-                    .opacity(expanded ? 1 : 0)
-                    .allowsHitTesting(expanded)
 
-                if expanded {
-                    NavigationStack {
-                        VideoDetailView(
-                            stream: stream,
-                            onPlayerDragChanged: { dragOffset = max(0, $0) },
-                            onPlayerDragEnded: endDrag,
-                            playerDragOffset: dragOffset
-                        )
-                        .navigationDestination(for: StreamItem.self) { related in
-                            VideoDetailView(
-                                stream: related,
-                                onPlayerDragChanged: { dragOffset = max(0, $0) },
-                                onPlayerDragEnded: endDrag,
-                                playerDragOffset: dragOffset
-                            )
-                        }
-                        .navigationDestination(for: ChannelItem.self) { ChannelView(channel: $0) }
-                        .toolbar {
-                            ToolbarItemGroup(placement: .topBarLeading) {
-                                Button { navigateBack() } label: {
-                                    Image(systemName: "chevron.left")
-                                }
-                                .accessibilityLabel("Back")
-                                Button { close() } label: {
-                                    Image(systemName: "xmark")
-                                }
-                                .accessibilityLabel("Close and clear queue")
+                NavigationStack {
+                    VideoDetailView(
+                        stream: stream,
+                        onPlayerDragChanged: { dragOffset = max(0, $0) },
+                        onPlayerDragEnded: endDrag,
+                        playerDragOffset: dragOffset
+                    )
+                    .navigationDestination(for: ChannelItem.self) { ChannelView(channel: $0) }
+                    .toolbar {
+                        ToolbarItemGroup(placement: .topBarLeading) {
+                            Button { collapse() } label: {
+                                Image(systemName: "chevron.left")
                             }
-                            StandardToolbar()
+                            .accessibilityLabel("Back")
+                            Button { close() } label: {
+                                Image(systemName: "xmark")
+                            }
+                            .accessibilityLabel("Close")
                         }
+                        StandardToolbar()
                     }
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                } else {
-                    MiniPlayerBar(onOpen: expand, onClose: close)
-                        .padding(.horizontal, 12)
-                        .padding(.bottom, bottomPad)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
+                .tint(Theme.accent)
             }
         }
         .ignoresSafeArea(.container)
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: expanded)
     }
 
     /// Dragging the video preview slides just the video downward with the finger
@@ -71,25 +59,16 @@ struct VideoPlayerOverlay: View {
         }
     }
 
+    /// Dismiss the overlay; playback continues and the shared miniplayer takes
+    /// over in the tab bar.
     private func collapse() {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
             dragOffset = 0
-            expanded = false
+            app.focusedVideo = nil
         }
     }
 
-    /// `<` collapses to the mini player (soft back).
-    private func navigateBack() {
-        collapse()
-    }
-
-    private func expand() {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-            dragOffset = 0
-            expanded = true
-        }
-    }
-
+    /// Closes the video and clears the queue entirely.
     private func close() {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
             app.focusedVideo = nil

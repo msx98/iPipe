@@ -9,6 +9,7 @@ struct SettingsView: View {
     @State private var shareURL: URL?
     @State private var importFailed = false
     @State private var showLicense = false
+    @State private var showClearHistoryConfirm = false
 
     var body: some View {
         @Bindable var app = app
@@ -38,7 +39,7 @@ struct SettingsView: View {
                 }
                 Section("Data") {
                     Button("Clear watch history", role: .destructive) {
-                        app.clearHistory()
+                        showClearHistoryConfirm = true
                     }
                     .disabled(app.history.isEmpty)
                 }
@@ -115,6 +116,7 @@ struct SettingsView: View {
             } message: {
                 Text("Could not parse the selected cookies file (Netscape .txt or JSON expected).")
             }
+            .modifier(ClearHistoryConfirmation(isPresented: $showClearHistoryConfirm, onClear: app.clearHistory))
         }
     }
 

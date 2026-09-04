@@ -76,13 +76,6 @@ struct ContentView: View {
         .sheet(isPresented: $app.showHistorySheet) {
             NavigationStack {
                 HistoryView()
-                    .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Done") {
-                                app.showHistorySheet = false
-                            }
-                        }
-                    }
             }
         }
     }

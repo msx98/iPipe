@@ -246,7 +246,6 @@ struct PlaylistDetailScreen: View {
         }
         .navigationTitle("")
         .toolbar { playlistToolbar }
-        .navigationDestination(for: StreamItem.self) { VideoDetailView(stream: $0) }
         .alert("Rename Playlist", isPresented: $model.showRenameAlert) {
             TextField("Name", text: $model.newName)
             Button("Save") {
@@ -297,7 +296,7 @@ struct PlaylistDetailScreen: View {
                         .accessibilityLabel("Remove \(item.stream.title)")
 
                         Button {
-                            app.playlistsPath.append(item.stream)
+                            app.focusedVideo = item.stream
                             Task { await model.playItem(at: index, app: app) }
                         } label: {
                             streamRow(item.stream)
