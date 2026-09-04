@@ -15,6 +15,51 @@ final class PlayerModel {
     var currentStream: StreamItem?
     var hasItem: Bool { player != nil }
 
+    /// UIKit host for the inline video surface. Rendering through an `AVPlayerLayer`
+    /// (rather than SwiftUI's `VideoPlayer`) is what lets us drive real system
+    /// picture-in-picture: it backs an `AVPictureInPictureController` and is held
+    /// here on the model so PiP survives navigation / backgrounding.
+    let playerLayerView = PlayerLayerView()
+    private let pipController: AVPictureInPictureController?
+    private let pipDelegate = PlayerPiPDelegate()
+    var isPiPActive = false
+
+    init() {
+        pipController = AVPictureInPictureController(playerLayer: playerLayerView.playerLayer)
+        pipController?.delegate = pipDelegate
+        pipDelegate.onStateChange = { [weak self] active in
+            MainActor.assumeIsolated {
+                self?.isPiPActive = active
+            }
+        }
+    }
+
+    /// Toggles system picture-in-picture: starts it when idle, stops it when active.
+    func togglePiP() {
+        if isPiPActive {
+            stopPiP()
+        } else {
+            startPiP()
+        }
+    }
+
+    func startPiP() {
+        guard player != nil else { return }
+        guard let pip = pipController else { return }
+        if pip.isPictureInPicturePossible {
+            pip.startPictureInPicture()
+        } else {
+            NSLog("iPipe: PiP not possible yet")
+        }
+    }
+
+    func stopPiP() {
+        guard let pip = pipController else { return }
+        if pip.isPictureInPictureActive {
+            pip.stopPictureInPicture()
+        }
+    }
+
     var queue: [QueueItem] = []
     var queueIndex = 0
     var queueFinished = false
@@ -236,6 +281,7 @@ final class PlayerModel {
         player?.pause()
         player?.replaceCurrentItem(with: nil)
         player = nil
+        playerLayerView.playerLayer.player = nil
         currentStream = nil
         isPlaying = false
         currentTime = 0
@@ -327,6 +373,7 @@ final class PlayerModel {
         } else {
             player = AVPlayer(playerItem: item)
         }
+        playerLayerView.playerLayer.player = player
         player?.play()
         startTimeObserver()
     }
@@ -410,5 +457,31 @@ final class PlayerModel {
             try? audioTrack.insertTimeRange(range, of: audioSource, at: .zero)
         }
         return AVPlayerItem(asset: composition)
+    }
+}
+
+/// A `UIView` whose backing layer is an `AVPlayerLayer`, so the inline video
+/// surface can drive an `AVPictureInPictureController`.
+final class PlayerLayerView: UIView {
+    override static var layerClass: AnyClass { AVPlayerLayer.self }
+    var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
+    init() {
+        super.init(frame: .zero)
+        playerLayer.videoGravity = .resizeAspect
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+}
+
+/// Observes `AVPictureInPictureController` lifecycle so `PlayerModel.isPiPActive`
+/// stays in sync with the real system state (the toolbar button toggles on it).
+private final class PlayerPiPDelegate: NSObject, AVPictureInPictureControllerDelegate {
+    var onStateChange: ((Bool) -> Void)?
+
+    func pictureInPictureControllerDidStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+        onStateChange?(true)
+    }
+
+    func pictureInPictureControllerDidStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+        onStateChange?(false)
     }
 }

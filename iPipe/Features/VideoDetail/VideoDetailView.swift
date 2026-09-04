@@ -111,7 +111,7 @@ struct VideoDetailView: View {
         VStack(spacing: 8) {
             Group {
                 if app.player.hasItem {
-                    VideoPlayer(player: app.player.player)
+                    PlayerLayerRepresentable(view: app.player.playerLayerView)
                 } else {
                     ZStack {
                         Rectangle().fill(.black)
@@ -252,4 +252,20 @@ struct VideoDetailView: View {
         }
     }
 
+}
+
+/// Hosts the shared `PlayerLayerView` owned by `PlayerModel`. Rendering through an
+/// `AVPlayerLayer` (instead of SwiftUI's `VideoPlayer`) is what enables system
+/// picture-in-picture: the layer backs an `AVPictureInPictureController` whose
+/// lifecycle is managed by `PlayerModel`.
+struct PlayerLayerRepresentable: UIViewRepresentable {
+    let view: PlayerLayerView
+
+    func makeUIView(context: Context) -> PlayerLayerView {
+        view
+    }
+
+    func updateUIView(_ uiView: PlayerLayerView, context: Context) {
+        // The player is synced onto the layer by PlayerModel on playback changes.
+    }
 }

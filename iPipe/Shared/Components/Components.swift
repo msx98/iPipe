@@ -4,9 +4,20 @@ import SwiftUI
 struct StandardToolbar: ToolbarContent {
     @Environment(AppModel.self) private var app
     var color: Color = Theme.topBarButtonColor
+    var showsPiP = false
 
     var body: some ToolbarContent {
         ToolbarItemGroup(placement: .topBarTrailing) {
+            if showsPiP {
+                Button {
+                    app.player.togglePiP()
+                } label: {
+                    Image(systemName: app.player.isPiPActive ? "pip.exit" : "pip.enter")
+                }
+                .accessibilityLabel("Picture in Picture")
+                .tint(color)
+            }
+
             Button {
                 app.showDownloadsSheet = true
             } label: {
