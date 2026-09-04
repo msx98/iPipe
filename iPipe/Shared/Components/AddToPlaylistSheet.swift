@@ -49,6 +49,7 @@ struct AddToPlaylistSheet: View {
                     Button("Done") {
                         dismiss()
                     }
+                    .tint(Theme.topBarButtonColor)
                 }
             }
             .alert("New Playlist", isPresented: $showNewPlaylistAlert) {

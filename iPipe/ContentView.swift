@@ -66,6 +66,7 @@ struct ContentView: View {
                             Button("Done") {
                                 app.showQueueCover = false
                             }
+                            .tint(Theme.topBarButtonColor)
                         }
                     }
             }
@@ -78,6 +79,7 @@ struct ContentView: View {
                             Button("Done") {
                                 app.showDownloadsSheet = false
                             }
+                            .tint(Theme.topBarButtonColor)
                         }
                     }
             }

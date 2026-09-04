@@ -33,10 +33,12 @@ struct VideoPlayerOverlay: View {
                                 Image(systemName: "chevron.left")
                             }
                             .accessibilityLabel("Back")
+                            .tint(Theme.topBarButtonColor)
                             Button { close() } label: {
                                 Image(systemName: "xmark")
                             }
                             .accessibilityLabel("Close")
+                            .tint(Theme.topBarButtonColor)
                         }
                         StandardToolbar()
                     }

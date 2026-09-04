@@ -76,6 +76,7 @@ struct HistoryView: View {
                 Button("Done") {
                     app.showHistorySheet = false
                 }
+                .tint(Theme.topBarButtonColor)
             }
         }
         .modifier(ClearHistoryConfirmation(isPresented: $showClearConfirm, onClear: app.clearHistory))

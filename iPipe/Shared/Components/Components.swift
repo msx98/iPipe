@@ -12,6 +12,7 @@ struct StandardToolbar: ToolbarContent {
                 Image(systemName: "arrow.down.circle")
             }
             .accessibilityLabel("Downloads")
+            .tint(Theme.topBarButtonColor)
 
             Button {
                 app.showHistorySheet = true
@@ -19,6 +20,7 @@ struct StandardToolbar: ToolbarContent {
                 Image(systemName: "clock.arrow.circlepath")
             }
             .accessibilityLabel("History")
+            .tint(Theme.topBarButtonColor)
 
             Button {
                 app.showQueueCover = true
@@ -26,6 +28,7 @@ struct StandardToolbar: ToolbarContent {
                 Image(systemName: "list.bullet")
             }
             .accessibilityLabel("Up Next")
+            .tint(Theme.topBarButtonColor)
         }
     }
 }
@@ -42,6 +45,7 @@ struct StandardToolbarGroup: View {
             Image(systemName: "arrow.down.circle")
         }
         .accessibilityLabel("Downloads")
+        .tint(Theme.topBarButtonColor)
 
         Button {
             app.showHistorySheet = true
@@ -49,6 +53,7 @@ struct StandardToolbarGroup: View {
             Image(systemName: "clock.arrow.circlepath")
         }
         .accessibilityLabel("History")
+        .tint(Theme.topBarButtonColor)
 
         Button {
             app.showQueueCover = true
@@ -56,6 +61,7 @@ struct StandardToolbarGroup: View {
             Image(systemName: "list.bullet")
         }
         .accessibilityLabel("Up Next")
+        .tint(Theme.topBarButtonColor)
     }
 }
 

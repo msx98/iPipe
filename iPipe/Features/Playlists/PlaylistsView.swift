@@ -51,6 +51,7 @@ List {
                     } label: {
                         Image(systemName: "plus")
                     }
+                    .tint(Theme.topBarButtonColor)
                 }
                 StandardToolbar()
             }
@@ -247,6 +248,7 @@ struct PlaylistDetailScreen: View {
         }
         .navigationTitle("")
         .toolbar { playlistToolbar }
+        .tint(Theme.topBarButtonColor)
         .alert("Rename Playlist", isPresented: $model.showRenameAlert) {
             TextField("Name", text: $model.newName)
             Button("Save") {
@@ -373,6 +375,7 @@ struct PlaylistDetailScreen: View {
                 withAnimation { model.isEditing.toggle() }
             }
             .disabled(playlist?.streams.isEmpty ?? true)
+            .tint(Theme.topBarButtonColor)
             Menu {
                 Button {
                     Task { await model.playAll(app: app) }
@@ -420,6 +423,7 @@ struct PlaylistDetailScreen: View {
             } label: {
                 Image(systemName: "ellipsis")
             }
+            .tint(Theme.topBarButtonColor)
         }
     }
 }
