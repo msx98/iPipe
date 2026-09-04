@@ -10,6 +10,7 @@ final class VideoDetailModel {
     var formats: [VideoFormat] = []
     var isLoading = true
     var error: String?
+    var backgroundMode = false
 
     func load(app: AppModel, stream: StreamItem) async {
         isLoading = true
@@ -244,25 +245,47 @@ struct VideoDetailView: View {
                 }
                 .buttonStyle(.plain)
             }
-            HStack(spacing: 12) {
-                Menu {
-                    downloadMenuItem(kind: .video)
-                    downloadMenuItem(kind: .audio)
-                } label: {
-                    Label("Download", systemImage: "arrow.down.circle")
-                        .font(.footnote.weight(.medium))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+            VStack(spacing: 12) {
+                HStack(spacing: 12) {
+                    Button {
+                        app.player.togglePiP()
+                    } label: {
+                        Label("PiP", systemImage: "pip.enter")
+                            .font(.footnote.weight(.medium))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+                    }
+                    Button {
+                        withAnimation { model.backgroundMode.toggle() }
+                    } label: {
+                        Label("Background", systemImage: "headphones")
+                            .font(.footnote.weight(.medium))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+                    }
                 }
-                Button {
-                    showAddToPlaylist = true
-                } label: {
-                    Label("Add to playlist", systemImage: "plus.circle")
-                        .font(.footnote.weight(.medium))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+                HStack(spacing: 12) {
+                    Menu {
+                        downloadMenuItem(kind: .video)
+                        downloadMenuItem(kind: .audio)
+                    } label: {
+                        Label("Download", systemImage: "arrow.down.circle")
+                            .font(.footnote.weight(.medium))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+                    }
+                    Button {
+                        showAddToPlaylist = true
+                    } label: {
+                        Label("Add to playlist", systemImage: "plus.circle")
+                            .font(.footnote.weight(.medium))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+                    }
                 }
             }
             if let description = model.stream?.description, !description.isEmpty {
