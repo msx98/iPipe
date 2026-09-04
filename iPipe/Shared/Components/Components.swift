@@ -59,6 +59,25 @@ struct StandardToolbarGroup: View {
     }
 }
 
+/// A stream row that opens the video on tap and enqueues it on long press.
+struct StreamCell: View {
+    @Environment(AppModel.self) private var app
+    let stream: StreamItem
+
+    var body: some View {
+        Button {
+            app.focusedVideo = stream
+        } label: {
+            StreamCard(stream: stream)
+        }
+        .buttonStyle(.plain)
+        .simultaneousGesture(LongPressGesture(minimumDuration: 0.4).onEnded { _ in
+            app.player.enqueue(stream)
+        })
+        .accessibilityHint("Long press to add to up next queue")
+    }
+}
+
 struct StreamCard: View {
     let stream: StreamItem
     var showsChannel = true

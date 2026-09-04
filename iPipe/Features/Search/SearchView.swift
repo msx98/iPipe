@@ -126,12 +126,7 @@ struct SearchView: View {
                 switch results {
                 case .streams(let streams):
                     ForEach(streams) { stream in
-                        Button {
-                            app.focusedVideo = stream
-                        } label: {
-                            StreamCard(stream: stream)
-                        }
-                        .buttonStyle(.plain)
+                        StreamCell(stream: stream)
                     }
                 case .channels(let channels):
                     ForEach(channels) { channel in
