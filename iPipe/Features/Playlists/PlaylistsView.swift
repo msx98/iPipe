@@ -170,18 +170,23 @@ struct PlaylistsView: View {
                     )
                 } else {
                     List {
-                        ForEach(app.playlists.playlists) { playlist in
+                        ForEach(Array(app.playlists.playlists.enumerated()), id: \.element.id) { index, playlist in
                             playlistCell(playlist)
+                                .padding(.trailing, 10)
+                                .overlay(alignment: .bottom) {
+                                    if index < app.playlists.playlists.count - 1 { rowSeparator }
+                                }
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                         }
                         .onMove { offsets, destination in
                             app.playlists.move(from: offsets, to: destination)
                         }
                     }
-                    .listStyle(.insetGrouped)
+                    .listStyle(.plain)
                     .environment(\.editMode, .constant(model.isEditing ? .active : .inactive))
                 }
             }
-            .navigationTitle("Playlists")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
@@ -191,12 +196,19 @@ struct PlaylistsView: View {
                     }
                     .tint(Theme.topBarButtonColor)
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(model.isEditing ? "Done" : "Edit") {
-                        withAnimation { model.isEditing.toggle() }
+                ToolbarItem(placement: .principal) {
+                    HStack(spacing: 12) {
+                        Text("Playlists")
+                            .font(.headline)
+                        Button {
+                            withAnimation { model.isEditing.toggle() }
+                        } label: {
+                            Image(systemName: model.isEditing ? "checkmark.circle" : "pencil")
+                                .font(.title3)
+                        }
+                        .buttonStyle(.plain)
+                        .tint(Theme.topBarButtonColor)
                     }
-                    .disabled(app.playlists.playlists.isEmpty)
-                    .tint(Theme.topBarButtonColor)
                 }
                 StandardToolbar()
             }
@@ -239,7 +251,7 @@ struct PlaylistsView: View {
         PlaylistRowCell(
             thumbnailURL: playlist.thumbnailURL,
             videoId: playlist.streams.first?.id ?? "",
-            thumbnailWidth: 96,
+            thumbnailWidth: 140,
             title: playlist.name,
             subtitle: "\(playlist.streamCount) items · \(playlist.totalDuration.durationText)",
             isEditing: model.isEditing,
@@ -258,6 +270,15 @@ struct PlaylistsView: View {
                 Label("Delete", systemImage: "trash")
             }
         }
+    }
+
+    /// A uniform hairline separator inset to match the row content so every
+    /// divider in the playlists list spans the same x-range as the detail list.
+    private var rowSeparator: some View {
+        Rectangle()
+            .fill(Color(UIColor.separator))
+            .frame(height: 0.5)
+            .padding(.horizontal, 16)
     }
 }
 
