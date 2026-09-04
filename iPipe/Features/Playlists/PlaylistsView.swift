@@ -424,8 +424,12 @@ struct PlaylistDetailScreen: View {
         List {
             Section {
                 headerRow(playlist)
+                    .overlay(alignment: .bottom) { rowSeparator }
+                    .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                 playAllButton
+                    .overlay(alignment: .bottom) { rowSeparator }
+                    .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
             }
             Section {
@@ -446,6 +450,11 @@ struct PlaylistDetailScreen: View {
                             model.removeItemDialogPresented = true
                         }
                     )
+                    .padding(.trailing, 10)
+                    .overlay(alignment: .bottom) {
+                        if index < playlist.streams.count - 1 { rowSeparator }
+                    }
+                    .listRowSeparator(.hidden)
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
                             model.pendingDeleteItem = item
@@ -509,6 +518,15 @@ struct PlaylistDetailScreen: View {
         .buttonStyle(.plain)
         .disabled(model.isEditing || (playlist?.streams.isEmpty ?? true))
         .padding(.vertical, 8)
+    }
+
+    /// A uniform hairline separator inset to match the row content so every
+    /// divider in the detail list spans the exact same x-range.
+    private var rowSeparator: some View {
+        Rectangle()
+            .fill(Color(UIColor.separator))
+            .frame(height: 0.5)
+            .padding(.horizontal, 16)
     }
 
 }
