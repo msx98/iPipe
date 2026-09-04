@@ -36,10 +36,6 @@ final class VideoDetailModel {
 struct VideoDetailView: View {
     @Environment(AppModel.self) private var app
     let stream: StreamItem
-    var onSwipeDownToCollapse: () -> Void = {}
-    var onPlayerDragChanged: ((CGFloat) -> Void)?
-    var onPlayerDragEnded: ((DragGesture.Value) -> Void)?
-    var playerDragOffset: CGFloat = 0
     @State private var model = VideoDetailModel()
     @State private var showDescription = false
     @State private var showAddToPlaylist = false
@@ -142,16 +138,6 @@ struct VideoDetailView: View {
             .aspectRatio(16 / 9, contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .contentShape(Rectangle())
-            .offset(y: playerDragOffset)
-            .gesture(
-                DragGesture(minimumDistance: 6)
-                    .onChanged { value in
-                        onPlayerDragChanged?(max(0, value.translation.height))
-                    }
-                    .onEnded { value in
-                        onPlayerDragEnded?(value)
-                    }
-            )
 
             HStack {
                 Menu {

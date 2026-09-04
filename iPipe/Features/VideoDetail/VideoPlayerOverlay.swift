@@ -20,12 +20,7 @@ struct VideoPlayerOverlay: View {
                     .ignoresSafeArea(.container)
 
                 NavigationStack {
-                    VideoDetailView(
-                        stream: stream,
-                        onPlayerDragChanged: { dragOffset = max(0, $0) },
-                        onPlayerDragEnded: endDrag,
-                        playerDragOffset: dragOffset
-                    )
+                    VideoDetailView(stream: stream)
                     .navigationDestination(for: ChannelItem.self) { ChannelView(channel: $0) }
                     .toolbar {
                         ToolbarItemGroup(placement: .topBarLeading) {
@@ -44,13 +39,20 @@ struct VideoPlayerOverlay: View {
                     }
                 }
                 .tint(Theme.accent)
+                .offset(y: dragOffset)
+                .gesture(
+                    DragGesture(minimumDistance: 10)
+                        .onChanged { dragOffset = max(0, $0.translation.height) }
+                        .onEnded { endDrag($0) }
+                )
             }
         }
         .ignoresSafeArea(.container)
     }
 
-    /// Dragging the video preview slides just the video downward with the finger
-    /// (the top bar stays put); on release it collapses or springs back.
+    /// Dragging down the whole overlay card (top bar + player + metadata + related)
+    /// slides it as one unit toward the finger; on release it collapses past the
+    /// threshold or springs back.
     private func endDrag(_ value: DragGesture.Value) {
         if value.translation.height > 140 || value.predictedEndTranslation.height > 120 {
             collapse()
