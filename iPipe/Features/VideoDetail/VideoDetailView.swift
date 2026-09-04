@@ -300,9 +300,7 @@ struct VideoDetailView: View {
     private func setOrientation(_ orientation: UIInterfaceOrientation) {
         guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first else { return }
         let mask: UIInterfaceOrientationMask = orientation.isLandscape ? .landscape : .portrait
-        do {
-            try scene.requestGeometryUpdate(.iOS(interfaceOrientations: mask))
-        } catch {
+        scene.requestGeometryUpdate(.iOS(interfaceOrientations: mask)) { error in
             NSLog("iPipe: orientation request failed: %@", error.localizedDescription)
         }
         scene.windows.first?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
