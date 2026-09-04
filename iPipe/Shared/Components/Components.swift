@@ -14,18 +14,18 @@ struct StandardToolbar: ToolbarContent {
             .accessibilityLabel("Downloads")
 
             Button {
-                app.showQueueCover = true
-            } label: {
-                Image(systemName: "list.bullet")
-            }
-            .accessibilityLabel("Up Next")
-
-            Button {
                 app.showHistorySheet = true
             } label: {
                 Image(systemName: "clock.arrow.circlepath")
             }
             .accessibilityLabel("History")
+
+            Button {
+                app.showQueueCover = true
+            } label: {
+                Image(systemName: "list.bullet")
+            }
+            .accessibilityLabel("Up Next")
         }
     }
 }
@@ -44,18 +44,18 @@ struct StandardToolbarGroup: View {
         .accessibilityLabel("Downloads")
 
         Button {
-            app.showQueueCover = true
-        } label: {
-            Image(systemName: "list.bullet")
-        }
-        .accessibilityLabel("Up Next")
-
-        Button {
             app.showHistorySheet = true
         } label: {
             Image(systemName: "clock.arrow.circlepath")
         }
         .accessibilityLabel("History")
+
+        Button {
+            app.showQueueCover = true
+        } label: {
+            Image(systemName: "list.bullet")
+        }
+        .accessibilityLabel("Up Next")
     }
 }
 

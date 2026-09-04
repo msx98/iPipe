@@ -45,6 +45,7 @@ struct ContentView: View {
 
             if let stream = app.focusedVideo {
                 VideoPlayerOverlay(stream: stream)
+                    .id(stream.id)
                     .transition(.opacity)
             }
         }
