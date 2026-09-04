@@ -15,25 +15,11 @@ struct ContentView: View {
                 get: { app.rootTab },
                 set: { app.rootTab = $0 }
             )) {
-                tabContent(TrendingView())
-                    .tabItem { Label("Trending", systemImage: "flame.fill") }
-                    .tag(AppModel.RootTab.trending)
-
-                tabContent(SearchView())
-                    .tabItem { Label("Search", systemImage: "magnifyingglass") }
-                    .tag(AppModel.RootTab.search)
-
-                tabContent(SubscriptionsView())
-                    .tabItem { Label("Subscriptions", systemImage: "person.2.fill") }
-                    .tag(AppModel.RootTab.subscriptions)
-
-                tabContent(PlaylistsView())
-                    .tabItem { Label("Playlists", systemImage: "list.bullet") }
-                    .tag(AppModel.RootTab.playlists)
-
-                tabContent(SettingsView())
-                    .tabItem { Label("Settings", systemImage: "gearshape.fill") }
-                    .tag(AppModel.RootTab.settings)
+                ForEach(visibleTabs, id: \.self) { tab in
+                    tabContent(view(for: tab))
+                        .tabItem { Label(label(for: tab), systemImage: systemImage(for: tab)) }
+                        .tag(tab)
+                }
             }
             .tint(Theme.accent)
             .onOpenURL { url in app.handleDeepLink(url) }
@@ -75,6 +61,48 @@ struct ContentView: View {
             NavigationStack {
                 HistoryView()
             }
+        }
+    }
+
+    /// Tabs to render, derived from the persisted snapshot kept in `app`. The
+    /// layout is fixed for the session (restart-to-apply), so `hiddenTabs` is
+    /// read from the launch snapshot rather than live preferences.
+    private var visibleTabs: [AppModel.RootTab] {
+        var tabs = app.tabOrder.filter { !app.hiddenTabs.contains($0) }
+        if !tabs.contains(.settings) {
+            tabs.append(.settings)
+        }
+        return tabs
+    }
+
+    @ViewBuilder
+    private func view(for tab: AppModel.RootTab) -> some View {
+        switch tab {
+        case .trending: TrendingView()
+        case .search: SearchView()
+        case .subscriptions: SubscriptionsView()
+        case .playlists: PlaylistsView()
+        case .settings: SettingsView()
+        }
+    }
+
+    private func label(for tab: AppModel.RootTab) -> String {
+        switch tab {
+        case .trending: return "Trending"
+        case .search: return "Search"
+        case .subscriptions: return "Subscriptions"
+        case .playlists: return "Playlists"
+        case .settings: return "Settings"
+        }
+    }
+
+    private func systemImage(for tab: AppModel.RootTab) -> String {
+        switch tab {
+        case .trending: return "flame.fill"
+        case .search: return "magnifyingglass"
+        case .subscriptions: return "person.2.fill"
+        case .playlists: return "list.bullet"
+        case .settings: return "gearshape.fill"
         }
     }
 

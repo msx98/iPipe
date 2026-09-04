@@ -12,7 +12,7 @@ final class AppModel {
         var id: String { rawValue }
     }
 
-    enum RootTab: String, CaseIterable, Identifiable, Hashable {
+    enum RootTab: String, CaseIterable, Identifiable, Hashable, Codable {
         case trending, search, subscriptions, playlists, settings
         var id: String { rawValue }
     }
@@ -45,15 +45,25 @@ final class AppModel {
     var history: [StreamItem]
     private(set) var colorSchemeChoice: String
 
+    /// Persisted tab layout. Loaded as a snapshot at init and consumed by
+    /// ContentView; changes made in Settings only take effect after relaunch.
+    private(set) var tabOrder: [RootTab]
+    private(set) var hiddenTabs: Set<RootTab>
+
     private static let subscriptionsKey = "np.subscriptions"
     private static let historyKey = "np.history"
     private static let backendKey = "np.backend"
     private static let schemeKey = "np.colorScheme"
+    private static let tabOrderKey = "np.tabOrder"
+    private static let hiddenTabsKey = "np.hiddenTabs"
+    private static let defaultTabOrder: [RootTab] = [.trending, .search, .subscriptions, .playlists, .settings]
 
     init() {
         let defaults = UserDefaults.standard
         backend = Backend(rawValue: defaults.string(forKey: Self.backendKey) ?? "") ?? .youtube
         colorSchemeChoice = defaults.string(forKey: Self.schemeKey) ?? "system"
+        tabOrder = Self.loadTabOrder(defaults)
+        hiddenTabs = Self.loadHiddenTabs(defaults)
         if let data = defaults.data(forKey: Self.subscriptionsKey),
            let decoded = try? JSONDecoder().decode([ChannelItem].self, from: data) {
             subscriptions = decoded
@@ -77,6 +87,43 @@ final class AppModel {
 
     func refreshSignedIn() {
         signedIn = CookieStore.shared.isSignedIn
+    }
+
+    private static func loadTabOrder(_ defaults: UserDefaults) -> [RootTab] {
+        guard let data = defaults.data(forKey: tabOrderKey),
+              let decoded = try? JSONDecoder().decode([RootTab].self, from: data),
+              !decoded.isEmpty else {
+            return defaultTabOrder
+        }
+        return decoded
+    }
+
+    private static func loadHiddenTabs(_ defaults: UserDefaults) -> Set<RootTab> {
+        guard let data = defaults.data(forKey: hiddenTabsKey),
+              let decoded = try? JSONDecoder().decode([RootTab].self, from: data) else {
+            return []
+        }
+        return Set(decoded).subtracting([.settings])
+    }
+
+    /// Persists a new tab layout to `UserDefaults` without mutating the in-memory
+    /// snapshot, so changes only take effect after the next launch. `.settings`
+    /// is always kept present and visible.
+    func saveTabConfiguration(order: [RootTab], hidden: Set<RootTab>) {
+        var resultOrder: [RootTab] = []
+        for tab in order where !resultOrder.contains(tab) {
+            resultOrder.append(tab)
+        }
+        if !resultOrder.contains(.settings) {
+            resultOrder.append(.settings)
+        }
+        let safeHidden = hidden.subtracting([.settings])
+        if let data = try? JSONEncoder().encode(resultOrder) {
+            UserDefaults.standard.set(data, forKey: Self.tabOrderKey)
+        }
+        if let data = try? JSONEncoder().encode(Array(safeHidden)) {
+            UserDefaults.standard.set(data, forKey: Self.hiddenTabsKey)
+        }
     }
 
     /// Handles an `ipipe://<youtube_link_or_hash>` URL: resolves it to a video

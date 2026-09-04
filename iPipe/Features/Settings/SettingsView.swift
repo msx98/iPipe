@@ -37,6 +37,13 @@ struct SettingsView: View {
                         Text("Dark").tag("dark")
                     }
                 }
+                Section("Tabs") {
+                    NavigationLink {
+                        TabsEditorView(order: app.tabOrder, hidden: app.hiddenTabs)
+                    } label: {
+                        Label("Tabs", systemImage: "square.grid.2x2")
+                    }
+                }
                 Section("Data") {
                     Button("Clear watch history", role: .destructive) {
                         showClearHistoryConfirm = true
@@ -140,4 +147,81 @@ struct ShareSheet: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+/// Edits a local snapshot of the tab layout and persists it on Done without
+/// mutating the running app's `tabOrder`/`hiddenTabs` (changes apply next launch).
+private struct TabsEditorView: View {
+    @Environment(AppModel.self) private var app
+    @Environment(\.dismiss) private var dismiss
+    @State private var order: [AppModel.RootTab]
+    @State private var hidden: Set<AppModel.RootTab>
+
+    init(order: [AppModel.RootTab], hidden: Set<AppModel.RootTab>) {
+        _order = State(initialValue: order)
+        _hidden = State(initialValue: hidden)
+    }
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(order, id: \.self) { tab in
+                    Toggle(isOn: binding(for: tab)) {
+                        Label(name(for: tab), systemImage: icon(for: tab))
+                    }
+                    .disabled(tab == .settings)
+                }
+                .onMove { order.move(fromOffsets: $0, toOffset: $1) }
+            } header: {
+                Text("Tabs")
+            } footer: {
+                Text("Restart the app to see changes.")
+            }
+        }
+        .navigationTitle("Tabs")
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarLeading) {
+                EditButton()
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Done") {
+                    app.saveTabConfiguration(order: order, hidden: hidden)
+                    dismiss()
+                }
+            }
+        }
+    }
+
+    private func binding(for tab: AppModel.RootTab) -> Binding<Bool> {
+        Binding(
+            get: { !hidden.contains(tab) },
+            set: { isOn in
+                if isOn {
+                    hidden.remove(tab)
+                } else {
+                    hidden.insert(tab)
+                }
+            }
+        )
+    }
+
+    private func name(for tab: AppModel.RootTab) -> String {
+        switch tab {
+        case .trending: return "Trending"
+        case .search: return "Search"
+        case .subscriptions: return "Subscriptions"
+        case .playlists: return "Playlists"
+        case .settings: return "Settings"
+        }
+    }
+
+    private func icon(for tab: AppModel.RootTab) -> String {
+        switch tab {
+        case .trending: return "flame.fill"
+        case .search: return "magnifyingglass"
+        case .subscriptions: return "person.2.fill"
+        case .playlists: return "list.bullet"
+        case .settings: return "gearshape.fill"
+        }
+    }
 }
