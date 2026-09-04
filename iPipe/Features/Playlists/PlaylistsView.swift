@@ -72,15 +72,11 @@ struct PlaylistRowCell: View {
     let onDelete: () -> Void
 
     var body: some View {
-        ZStack {
-            HStack(spacing: 12) {
-                leading
-                Spacer(minLength: 0)
-                PlaylistRowAccessory(isEditing: isEditing, onDelete: onDelete)
-            }
-            .rotationEffect(.degrees(-180))
+        HStack(spacing: 12) {
+            leading
+            Spacer(minLength: 0)
+            PlaylistRowAccessory(isEditing: isEditing, onDelete: onDelete)
         }
-        .rotationEffect(.degrees(180))
         .contentShape(Rectangle())
     }
 
