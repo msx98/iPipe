@@ -6,7 +6,7 @@ struct ContentView: View {
     /// Clearance above the miniplayer so scroll content ends with a comfortable
     /// margin (more than the miniplayer's height) instead of scrolling under it.
     private static let miniPlayerClearance: CGFloat = 56
-    private static let tabBarHeight: CGFloat = 53
+    private static let miniPlayerGap: CGFloat = 8
 
     var body: some View {
         @Bindable var app = app
@@ -96,7 +96,7 @@ struct ContentView: View {
                     )
                     .padding(.horizontal, 12)
                 }
-                .padding(.bottom, Self.tabBarHeight)
+                .padding(.bottom, Self.miniPlayerGap)
             }
         }
     }
