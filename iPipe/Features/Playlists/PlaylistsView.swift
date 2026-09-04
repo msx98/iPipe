@@ -424,9 +424,9 @@ struct PlaylistDetailScreen: View {
         List {
             Section {
                 headerRow(playlist)
-                    .listRowInsets(EdgeInsets())
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                 playAllButton
-                    .listRowInsets(EdgeInsets())
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
             }
             Section {
                 ForEach(Array(playlist.streams.enumerated()), id: \.element.id) { index, item in
@@ -454,7 +454,7 @@ struct PlaylistDetailScreen: View {
                             Label("Delete", systemImage: "trash")
                         }
                     }
-                    .listRowInsets(EdgeInsets())
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                 }
                 .onMove { offsets, destination in
                     app.playlists.moveItem(from: offsets, to: destination, in: playlist)
@@ -493,7 +493,6 @@ struct PlaylistDetailScreen: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 16)
         .padding(.vertical, 10)
     }
 
@@ -509,7 +508,6 @@ struct PlaylistDetailScreen: View {
         }
         .buttonStyle(.plain)
         .disabled(model.isEditing || (playlist?.streams.isEmpty ?? true))
-        .padding(.horizontal, 16)
         .padding(.vertical, 8)
     }
 
