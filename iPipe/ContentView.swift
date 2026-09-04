@@ -25,10 +25,7 @@ struct ContentView: View {
             .tint(Theme.accent)
             .onOpenURL { url in app.handleDeepLink(url) }
             .onChange(of: scenePhase) { _, phase in
-                app.player.handleScenePhase(phase)
-            }
-            .onChange(of: app.focusedVideo == nil) { _, isMiniplayer in
-                app.player.updateMiniplayer(isMiniplayer)
+                app.player.updateAppForegrounded(phase == .active)
             }
 
             if let stream = app.focusedVideo {

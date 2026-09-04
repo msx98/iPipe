@@ -306,7 +306,7 @@ struct MiniPlayerBar: View {
             Button {
                 app.player.togglePlayPause()
             } label: {
-                Image(systemName: app.player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                Image(systemName: app.player.playState ? "pause.circle.fill" : "play.circle.fill")
                     .font(.title2)
             }
             .buttonStyle(.plain)

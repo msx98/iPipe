@@ -348,7 +348,7 @@ struct PlayerControlsOverlay: View {
     /// True while background playback is active (audio continues in the background).
     /// Drives the inert headphone badge + the "x" exit button.
     private var isBackgroundMode: Bool {
-        app.player.mode == .background || app.player.mode == .backgroundMiniplayer
+        app.player.videoOutput == .background
     }
 
     var body: some View {
@@ -374,13 +374,13 @@ struct PlayerControlsOverlay: View {
         Button {
             app.player.togglePlayPause()
         } label: {
-            Image(systemName: app.player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+            Image(systemName: app.player.playState ? "pause.circle.fill" : "play.circle.fill")
                 .font(.system(size: 52))
                 .foregroundStyle(.white)
                 .shadow(color: .black.opacity(0.5), radius: 4)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(app.player.isPlaying ? "Pause" : "Play")
+        .accessibilityLabel(app.player.playState ? "Pause" : "Play")
     }
 
     /// Play/pause flanked by −10/+10 skip buttons (Netflix/YouTube layout).
