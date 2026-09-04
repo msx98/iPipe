@@ -3,8 +3,10 @@ import SwiftUI
 struct ContentView: View {
     @Environment(AppModel.self) private var app
 
-    private static let miniPlayerHeight: CGFloat = 49
-    private static let tabBarHeight: CGFloat = 49
+    /// Clearance above the miniplayer so scroll content ends with a comfortable
+    /// margin (more than the miniplayer's height) instead of scrolling under it.
+    private static let miniPlayerClearance: CGFloat = 56
+    private static let tabBarHeight: CGFloat = 53
 
     var body: some View {
         @Bindable var app = app
@@ -36,20 +38,17 @@ struct ContentView: View {
             .tint(Theme.accent)
             .onOpenURL { url in app.handleDeepLink(url) }
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                // Reserve space so scroll content ends above the miniplayer.
                 if app.player.hasItem && app.focusedVideo == nil {
-                    Color.clear.frame(height: Self.miniPlayerHeight)
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 0).frame(height: Self.miniPlayerClearance)
+                        MiniPlayerBar(
+                            onOpen: { if let stream = app.player.currentStream { app.focusedVideo = stream } },
+                            onClose: { app.player.stop() }
+                        )
+                        .padding(.horizontal, 12)
+                    }
+                    .padding(.bottom, Self.tabBarHeight)
                 }
-            }
-
-            if app.player.hasItem && app.focusedVideo == nil {
-                MiniPlayerBar(
-                    onOpen: { if let stream = app.player.currentStream { app.focusedVideo = stream } },
-                    onClose: { app.player.stop() }
-                )
-                .padding(.horizontal, 12)
-                .padding(.bottom, 4)
-                .padding(.bottom, Self.tabBarHeight)
             }
 
             if let stream = app.focusedVideo {
