@@ -89,36 +89,19 @@ struct PlaylistRowCell: View {
     var onTap: (() -> Void)?
     var onRename: (() -> Void)?
     let onDelete: () -> Void
-    /// Optional custom-reorder grip handling. When non-nil *and* editing, a leading
-    /// grip (left of the thumbnail) is shown that reports its drag so the owning
-    /// screen can perform a smooth reorder (the native handle is on the wrong side).
-    var onGripChange: ((DragGesture.Value) -> Void)?
-    var onGripEnded: (() -> Void)?
 
     var body: some View {
         HStack(spacing: 12) {
-            if isEditing, let onGripChange {
-                leadingGrip(onGripChange)
+            if isEditing {
+                PlaylistRowAccessory(isEditing: true, onDelete: onDelete)
             }
             leading
             Spacer(minLength: 0)
-            PlaylistRowAccessory(isEditing: isEditing, onDelete: onDelete)
+            if !isEditing {
+                PlaylistRowAccessory(isEditing: false, onDelete: onDelete)
+            }
         }
         .contentShape(Rectangle())
-    }
-
-    @ViewBuilder
-    private func leadingGrip(_ onGripChange: @escaping (DragGesture.Value) -> Void) -> some View {
-        Image(systemName: "line.3.horizontal")
-            .font(.title3)
-            .foregroundStyle(.secondary)
-            .frame(width: 32)
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged(onGripChange)
-                    .onEnded { _ in onGripEnded?() }
-            )
     }
 
     @ViewBuilder
@@ -376,11 +359,6 @@ struct PlaylistDetailScreen: View {
     @Environment(AppModel.self) private var app
     let playlistID: String
     @State private var model: PlaylistDetailModel
-    @State private var dragItemID: String?
-    @State private var dragOriginIndex = 0
-    @State private var dragCurrentIndex = 0
-    @State private var dragTranslation: CGFloat = 0
-    @State private var rowHeight: CGFloat = 79
 
     init(playlistID: String) {
         self.playlistID = playlistID
@@ -466,16 +444,8 @@ struct PlaylistDetailScreen: View {
                         onDelete: {
                             model.pendingDeleteItem = item
                             model.removeItemDialogPresented = true
-                        },
-                        onGripChange: { value in handleGripDrag(item: item, value: value) },
-                        onGripEnded: { handleGripDragEnd() }
+                        }
                     )
-                    .offset(y: dragItemID == item.stream.id ? dragTranslation - CGFloat(dragCurrentIndex - dragOriginIndex) * rowHeight : 0)
-                    .zIndex(dragItemID == item.stream.id ? 1 : 0)
-                    .scaleEffect(dragItemID == item.stream.id ? 1.05 : 1)
-                    .shadow(color: .black.opacity(dragItemID == item.stream.id ? 0.18 : 0), radius: 8, x: 0, y: 4)
-                    .opacity(dragItemID == item.stream.id ? 1 : (model.isEditing && dragItemID != nil ? 0.85 : 1))
-                    .onGeometryChange(for: CGFloat.self, of: { $0.size.height }, action: { rowHeight = $0 })
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
                             model.pendingDeleteItem = item
@@ -486,9 +456,13 @@ struct PlaylistDetailScreen: View {
                     }
                     .listRowInsets(EdgeInsets())
                 }
+                .onMove { offsets, destination in
+                    app.playlists.moveItem(from: offsets, to: destination, in: playlist)
+                }
             }
         }
         .listStyle(.plain)
+        .environment(\.editMode, .constant(model.isEditing ? .active : .inactive))
         .overlay(alignment: .center) {
             if model.isWorking {
                 ProgressView()
@@ -537,40 +511,6 @@ struct PlaylistDetailScreen: View {
         .disabled(model.isEditing || (playlist?.streams.isEmpty ?? true))
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-    }
-
-    /// Custom reorder drag: tracks the touch, and when the accumulated translation
-    /// has crossed a whole row height, moves the item in the manager from its current
-    /// index to the target index (animated) so the other rows settle smoothly, then
-    /// re-anchors so the drag translation doesn't accumulate (jitter-free).
-    private func handleGripDrag(item: LocalPlaylistItem, value: DragGesture.Value) {
-        guard let currentPlaylist = playlist else { return }
-        let translation = value.translation.height
-        if dragItemID != item.stream.id {
-            let start = currentPlaylist.streams.firstIndex(where: { $0.stream.id == item.stream.id }) ?? 0
-            dragItemID = item.stream.id
-            dragOriginIndex = start
-            dragCurrentIndex = start
-            dragTranslation = translation
-            return
-        }
-        dragTranslation = translation
-        let count = currentPlaylist.streams.count
-        let target = dragOriginIndex + Int((translation / rowHeight).rounded())
-        let clamped = max(0, min(count - 1, target))
-        guard clamped != dragCurrentIndex else { return }
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-            app.playlists.moveItem(from: dragCurrentIndex, to: clamped, in: currentPlaylist)
-            dragCurrentIndex = clamped
-        }
-    }
-
-    /// Ends the reorder drag and lets the lifted row settle back to its final slot.
-    private func handleGripDragEnd() {
-        dragItemID = nil
-        dragOriginIndex = 0
-        dragCurrentIndex = 0
-        dragTranslation = 0
     }
 
 }

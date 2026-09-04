@@ -72,18 +72,6 @@ final class LocalPlaylistManager {
         save()
     }
 
-    /// Moves the item at `fromIndex` to `toIndex` (indices reflect the playlist's
-    /// current stream order) and persists the result. Used by the custom
-    /// drag-to-reorder grip since the native reorder control cannot be relocated.
-    func moveItem(from fromIndex: Int, to toIndex: Int, in playlist: LocalPlaylist) {
-        guard let idx = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
-        let count = playlists[idx].streams.count
-        guard fromIndex >= 0, fromIndex < count, toIndex >= 0, toIndex < count, fromIndex != toIndex else { return }
-        let element = playlists[idx].streams.remove(at: fromIndex)
-        playlists[idx].streams.insert(element, at: toIndex)
-        save()
-    }
-
     func removeItem(_ item: LocalPlaylistItem, from playlist: LocalPlaylist) {
         guard let idx = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
         playlists[idx].streams.removeAll { $0.stream.id == item.stream.id }
