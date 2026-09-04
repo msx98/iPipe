@@ -57,6 +57,7 @@ struct ContentView: View {
                     .transition(.opacity)
             }
         }
+        .tint(Theme.accent)
         .fullScreenCover(isPresented: $app.showQueueCover) {
             NavigationStack {
                 QueueScreen()
