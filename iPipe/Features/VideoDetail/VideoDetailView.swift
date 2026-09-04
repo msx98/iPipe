@@ -1,5 +1,6 @@
 import SwiftUI
 import AVKit
+import UIKit
 
 @Observable
 @MainActor
@@ -71,6 +72,9 @@ struct VideoDetailView: View {
         }
         .fullScreenCover(isPresented: $isFullscreen) {
             FullscreenPlayerView(onExit: { isFullscreen = false })
+        }
+        .onChange(of: isFullscreen) { _, isFullscreen in
+            setOrientation(isFullscreen ? .landscapeRight : .portrait)
         }
     }
 
@@ -290,6 +294,21 @@ struct VideoDetailView: View {
         }
     }
 
+    /// Rotates the interface for fullscreen playback: landscape while the fullscreen
+    /// player is presented, portrait on exit. Uses the modern scene-based geometry
+    /// API plus a `UIDevice` nudge so both devices and simulators honor the request.
+    private func setOrientation(_ orientation: UIInterfaceOrientation) {
+        guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first else { return }
+        let mask: UIInterfaceOrientationMask = orientation.isLandscape ? .landscape : .portrait
+        do {
+            try scene.requestGeometryUpdate(.iOS(interfaceOrientations: mask))
+        } catch {
+            NSLog("iPipe: orientation request failed: %@", error.localizedDescription)
+        }
+        scene.windows.first?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+        UIDevice.current.setValue(orientation.rawValue, forKey: "orientation")
+    }
+
 }
 
 /// Hosts the shared `PlayerLayerView` owned by `PlayerModel`. Rendering through an
@@ -316,6 +335,9 @@ struct PlayerControlsOverlay: View {
     @Environment(AppModel.self) private var app
     let isFullscreen: Bool
     let onFullscreen: () -> Void
+    /// Non-nil while the user is dragging the seek bar; the finger position is
+    /// shown immediately and `seek(to:)` fires once on release.
+    @State private var scrubTime: TimeInterval?
 
     var body: some View {
         ZStack {
@@ -326,7 +348,7 @@ struct PlayerControlsOverlay: View {
             )
             VStack(spacing: 0) {
                 Spacer()
-                playPauseButton
+                centerButtons
                 Spacer()
                 bottomBar
             }
@@ -346,18 +368,68 @@ struct PlayerControlsOverlay: View {
         .accessibilityLabel(app.player.isPlaying ? "Pause" : "Play")
     }
 
+    /// Play/pause flanked by −10/+10 skip buttons (Netflix/YouTube layout).
+    private var centerButtons: some View {
+        HStack(spacing: 44) {
+            skipBackwardButton
+            playPauseButton
+            skipForwardButton
+        }
+    }
+
+    private var skipBackwardButton: some View {
+        Button {
+            app.player.skipBackward()
+        } label: {
+            Image(systemName: "gobackward.10")
+                .font(.system(size: 32, weight: .medium))
+                .foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.5), radius: 4)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Back 10 seconds")
+    }
+
+    private var skipForwardButton: some View {
+        Button {
+            app.player.skipForward()
+        } label: {
+            Image(systemName: "goforward.10")
+                .font(.system(size: 32, weight: .medium))
+                .foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.5), radius: 4)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Forward 10 seconds")
+    }
+
+    /// The slider range is always at least 1 so `0...1` stays valid before a
+    /// duration is known. `displayCurrentTime` drives both the thumb and the time
+    /// label so scrubbing feels instant while dragging.
+    private var displayCurrentTime: TimeInterval {
+        scrubTime ?? min(app.player.currentTime, app.player.currentDuration)
+    }
+
     private var bottomBar: some View {
         HStack(spacing: 10) {
-            Text(app.player.currentTime.durationText)
+            Text(displayCurrentTime.durationText)
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.white)
                 .frame(minWidth: 44, alignment: .trailing)
             Slider(
                 value: Binding(
-                    get: { min(app.player.currentTime, app.player.currentDuration) },
-                    set: { app.player.seek(to: $0) }
+                    get: { displayCurrentTime },
+                    set: { scrubTime = $0 }
                 ),
-                in: 0...app.player.currentDuration
+                in: 0...max(app.player.currentDuration, 1),
+                onEditingChanged: { editing in
+                    if editing {
+                        scrubTime = min(app.player.currentTime, app.player.currentDuration)
+                    } else if let scrub = scrubTime {
+                        app.player.seek(to: scrub)
+                        scrubTime = nil
+                    }
+                }
             )
             .tint(.white)
             Text(app.player.currentDuration.durationText)
@@ -375,8 +447,8 @@ struct PlayerControlsOverlay: View {
             .buttonStyle(.plain)
             .accessibilityLabel(isFullscreen ? "Exit fullscreen" : "Fullscreen")
         }
-        .padding(.horizontal, 12)
-        .padding(.bottom, 10)
+        .padding(.horizontal, 24)
+        .padding(.bottom, 20)
     }
 }
 
