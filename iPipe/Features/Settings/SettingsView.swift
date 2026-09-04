@@ -36,8 +36,6 @@ struct SettingsView: View {
                         Text("Light").tag("light")
                         Text("Dark").tag("dark")
                     }
-                }
-                Section("Tabs") {
                     NavigationLink {
                         TabsEditorView(order: app.tabOrder, hidden: app.hiddenTabs)
                     } label: {
