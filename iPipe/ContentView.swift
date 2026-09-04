@@ -48,7 +48,6 @@ struct ContentView: View {
                     .transition(.opacity)
             }
         }
-        .ignoresSafeArea(.container, edges: .bottom)
         .fullScreenCover(isPresented: $app.showQueueCover) {
             NavigationStack {
                 QueueScreen()
