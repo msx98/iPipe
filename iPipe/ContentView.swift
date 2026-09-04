@@ -4,7 +4,7 @@ struct ContentView: View {
     @Environment(AppModel.self) private var app
 
     private static let miniPlayerHeight: CGFloat = 49
-    private static let tabBarHeight: CGFloat = 83
+    private static let tabBarHeight: CGFloat = 49
 
     var body: some View {
         @Bindable var app = app
