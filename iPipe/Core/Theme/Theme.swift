@@ -2,7 +2,7 @@ import SwiftUI
 
 enum Theme {
     static let accent = Color(red: 0.89, green: 0.16, blue: 0.14)
-    static let topBarButtonColor: Color = .white
+    static let topBarButtonColor: Color = .primary
 
     static func scheme(_ choice: String) -> ColorScheme? {
         switch choice {

@@ -3,6 +3,7 @@ import SwiftUI
 /// The shared top-right toolbar: Downloads, queue view, and history.
 struct StandardToolbar: ToolbarContent {
     @Environment(AppModel.self) private var app
+    var color: Color = Theme.topBarButtonColor
 
     var body: some ToolbarContent {
         ToolbarItemGroup(placement: .topBarTrailing) {
@@ -12,7 +13,7 @@ struct StandardToolbar: ToolbarContent {
                 Image(systemName: "arrow.down.circle")
             }
             .accessibilityLabel("Downloads")
-            .tint(Theme.topBarButtonColor)
+            .tint(color)
 
             Button {
                 app.showHistorySheet = true
@@ -20,7 +21,7 @@ struct StandardToolbar: ToolbarContent {
                 Image(systemName: "clock.arrow.circlepath")
             }
             .accessibilityLabel("History")
-            .tint(Theme.topBarButtonColor)
+            .tint(color)
 
             Button {
                 app.showQueueCover = true
@@ -28,7 +29,7 @@ struct StandardToolbar: ToolbarContent {
                 Image(systemName: "list.bullet")
             }
             .accessibilityLabel("Up Next")
-            .tint(Theme.topBarButtonColor)
+            .tint(color)
         }
     }
 }
@@ -37,6 +38,7 @@ struct StandardToolbar: ToolbarContent {
 /// ToolbarContent can't be expressed directly, e.g. inside an item group).
 struct StandardToolbarGroup: View {
     @Environment(AppModel.self) private var app
+    var color: Color = Theme.topBarButtonColor
 
     var body: some View {
         Button {
@@ -45,7 +47,7 @@ struct StandardToolbarGroup: View {
             Image(systemName: "arrow.down.circle")
         }
         .accessibilityLabel("Downloads")
-        .tint(Theme.topBarButtonColor)
+        .tint(color)
 
         Button {
             app.showHistorySheet = true
@@ -53,7 +55,7 @@ struct StandardToolbarGroup: View {
             Image(systemName: "clock.arrow.circlepath")
         }
         .accessibilityLabel("History")
-        .tint(Theme.topBarButtonColor)
+        .tint(color)
 
         Button {
             app.showQueueCover = true
@@ -61,7 +63,7 @@ struct StandardToolbarGroup: View {
             Image(systemName: "list.bullet")
         }
         .accessibilityLabel("Up Next")
-        .tint(Theme.topBarButtonColor)
+        .tint(color)
     }
 }
 
