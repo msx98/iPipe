@@ -392,7 +392,7 @@ struct PlaylistDetailScreen: View {
             }
         }
         .navigationTitle("")
-        .toolbar { playlistToolbar }
+        .toolbar { playlistToolbar; StandardToolbar() }
         .sheet(isPresented: $model.showShareSheet) {
             ShareSheet(items: [model.shareText])
         }
