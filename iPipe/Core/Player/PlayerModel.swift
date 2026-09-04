@@ -61,6 +61,9 @@ final class PlayerModel {
             videoOutput = .background
             activateBackgroundAudio()
         }
+        if videoOutput != .pip {
+            dismissPiPIfNeeded()
+        }
         syncPlayState()
     }
 
@@ -73,6 +76,9 @@ final class PlayerModel {
             activateBackgroundAudio()
         } else {
             deactivateBackgroundAudio()
+        }
+        if videoOutput != .pip {
+            dismissPiPIfNeeded()
         }
         syncPlayState()
     }
@@ -125,7 +131,11 @@ final class PlayerModel {
             MainActor.assumeIsolated {
                 guard let self else { return }
                 self.isPiPActive = active
-                self.setVideoOutput(active ? .pip : .normal)
+                if active {
+                    self.setVideoOutput(.pip)
+                } else if self.videoOutput == .pip {
+                    self.setVideoOutput(.normal)
+                }
             }
         }
     }
@@ -145,6 +155,7 @@ final class PlayerModel {
             NSLog("iPipe: PiP controller is nil")
             return
         }
+        setVideoOutput(.pip)
         NSLog("iPipe: PiP controller exists, pipPossible=%d pipActive=%d", pip.isPictureInPicturePossible ? 1 : 0, pip.isPictureInPictureActive ? 1 : 0)
         if pip.isPictureInPicturePossible {
             pip.startPictureInPicture()
@@ -158,6 +169,11 @@ final class PlayerModel {
         if pip.isPictureInPictureActive {
             pip.stopPictureInPicture()
         }
+    }
+
+    private func dismissPiPIfNeeded() {
+        guard let pip = pipController, pip.isPictureInPictureActive else { return }
+        pip.stopPictureInPicture()
     }
 
     var queue: [QueueItem] = []
@@ -203,6 +219,7 @@ final class PlayerModel {
         deactivateBackgroundAudio()
         currentTime = duration
         removeEndObserver()
+        dismissPiPIfNeeded()
         syncPlayState()
     }
 
@@ -381,6 +398,7 @@ final class PlayerModel {
         playWhenForegrounded = false
         videoOutput = .normal
         deactivateBackgroundAudio()
+        dismissPiPIfNeeded()
         isPlaying = false
         currentTime = 0
         queue = []
