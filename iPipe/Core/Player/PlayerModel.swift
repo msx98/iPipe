@@ -2,11 +2,20 @@ import AVFoundation
 import AVKit
 import MediaPlayer
 import Observation
+import SwiftUI
 import UIKit
 
 @Observable
 @MainActor
 final class PlayerModel {
+    /// The playback position/context governing background, PiP, and miniplayer
+    /// behavior. Toggled by the "Background" button, the system PiP lifecycle,
+    /// and the miniplayer (video-page collapsed) state; resets to `.foreground`
+    /// when the queue is cleared or finishes.
+    enum PlayerMode {
+        case foreground, background, pip, foregroundMiniplayer, backgroundMiniplayer, pipMiniplayer
+    }
+
     var player: AVPlayer?
     var currentTitle = ""
     var currentAuthor = ""
@@ -23,24 +32,106 @@ final class PlayerModel {
     private let pipController: AVPictureInPictureController?
     private let pipDelegate = PlayerPiPDelegate()
     var isPiPActive = false
-    /// When true, the player enters "background" mode: audio continues while the
-    /// app is backgrounded and the overlay swaps fullscreen for an "x" that exits
-    /// the mode. Off by default (backgrounding alone must not keep playing).
-    var backgroundMode = false
+    /// The playback position/context governing background, PiP, and miniplayer
+    /// behavior. Toggled by the "Background" button, the system PiP lifecycle,
+    /// and the miniplayer (video-page collapsed) state; resets to `.foreground`
+    /// when the queue is cleared or finishes.
+    var mode: PlayerMode = .foreground
 
-    /// Toggles background playback. Enabling keeps the shared `AVAudioSession` in
-    /// the `.playback` category (required for audio to continue in the background,
-    /// alongside `UIBackgroundModes` = `audio`); disabling deactivates it so
-    /// backgrounding pauses again.
-    func setBackgroundMode(_ enabled: Bool) {
-        backgroundMode = enabled
-        let session = AVAudioSession.sharedInstance()
-        if enabled {
-            try? session.setCategory(.playback, mode: .moviePlayback)
-            try? session.setActive(true)
-        } else {
-            try? session.setActive(false, options: .notifyOthersOnDeactivation)
+    /// Toggles between foreground and background playback, preserving whether the
+    /// player is currently in the miniplayer: foreground↔background and
+    /// foregroundMiniplayer↔backgroundMiniplayer. Entering a background mode keeps
+    /// the shared `AVAudioSession` active (`.playback` category, alongside
+    /// `UIBackgroundModes` = `audio`) so audio continues in the background; leaving
+    /// every background mode deactivates it so backgrounding pauses again.
+    func toggleBackground() {
+        switch mode {
+        case .foreground:
+            transition(to: .background)
+        case .background:
+            transition(to: .foreground)
+        case .foregroundMiniplayer:
+            transition(to: .backgroundMiniplayer)
+        case .backgroundMiniplayer:
+            transition(to: .foregroundMiniplayer)
+        case .pip, .pipMiniplayer:
+            break
         }
+    }
+
+    /// Adds/removes the miniplayer suffix (foreground↔foregroundMiniplayer,
+    /// background↔backgroundMiniplayer, pip↔pipMiniplayer) without affecting the
+    /// underlying background/pip state — driven by whether the video page is
+    /// collapsed to the miniplayer (`active` = miniplayer shown).
+    func updateMiniplayer(_ active: Bool) {
+        if active {
+            switch mode {
+            case .foreground: mode = .foregroundMiniplayer
+            case .background: mode = .backgroundMiniplayer
+            case .pip: mode = .pipMiniplayer
+            default: break
+            }
+        } else {
+            switch mode {
+            case .foregroundMiniplayer: mode = .foreground
+            case .backgroundMiniplayer: mode = .background
+            case .pipMiniplayer: mode = .pip
+            default: break
+            }
+        }
+    }
+
+    /// Scene lifecycle: backgrounding pauses foreground playback; returning to the
+    /// foreground resumes system PiP. Background and PiP modes keep playing.
+    func handleScenePhase(_ phase: ScenePhase) {
+        switch phase {
+        case .background:
+            if mode == .foreground || mode == .foregroundMiniplayer {
+                player?.pause()
+                isPlaying = false
+                updateNowPlaying()
+            }
+        case .active:
+            if mode == .pip || mode == .pipMiniplayer {
+                player?.play()
+                isPlaying = true
+                updateNowPlaying()
+            }
+        default:
+            break
+        }
+    }
+
+    private func transition(to newMode: PlayerMode) {
+        let wasBackground = usesBackgroundAudio(mode)
+        let nowBackground = usesBackgroundAudio(newMode)
+        mode = newMode
+        if nowBackground && !wasBackground {
+            activateBackgroundAudio()
+        } else if !nowBackground && wasBackground {
+            deactivateBackgroundAudio()
+        }
+    }
+
+    /// Whether a mode plays audio while the app is backgrounded (audio session kept
+    /// active). PiP modes render via system picture-in-picture, not the audio session.
+    private func usesBackgroundAudio(_ m: PlayerMode) -> Bool {
+        switch m {
+        case .background, .backgroundMiniplayer:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func activateBackgroundAudio() {
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.playback, mode: .moviePlayback)
+        try? session.setActive(true)
+    }
+
+    private func deactivateBackgroundAudio() {
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
     init() {
@@ -48,7 +139,13 @@ final class PlayerModel {
         pipController?.delegate = pipDelegate
         pipDelegate.onStateChange = { [weak self] active in
             MainActor.assumeIsolated {
-                self?.isPiPActive = active
+                guard let self else { return }
+                self.isPiPActive = active
+                if active {
+                    self.enterPiP()
+                } else {
+                    self.exitPiP()
+                }
             }
         }
     }
@@ -80,6 +177,31 @@ final class PlayerModel {
         guard let pip = pipController else { return }
         if pip.isPictureInPictureActive {
             pip.stopPictureInPicture()
+        }
+    }
+
+    /// PiP started: enter `.pip` (or `.pipMiniplayer` if the video page is
+    /// collapsed to the miniplayer). PiP renders via system picture-in-picture.
+    private func enterPiP() {
+        switch mode {
+        case .pip, .pipMiniplayer:
+            break
+        case .foregroundMiniplayer, .backgroundMiniplayer:
+            mode = .pipMiniplayer
+        default:
+            mode = .pip
+        }
+    }
+
+    /// PiP stopped: return to foreground playback, preserving the miniplayer suffix.
+    private func exitPiP() {
+        switch mode {
+        case .pipMiniplayer:
+            mode = .foregroundMiniplayer
+        case .pip:
+            mode = .foreground
+        default:
+            break
         }
     }
 
@@ -120,6 +242,7 @@ final class PlayerModel {
     /// restarted, but stop playback and mark the queue as finished.
     private func finishQueue() {
         queueFinished = true
+        mode = .foreground
         player?.pause()
         isPlaying = false
         currentTime = duration
@@ -311,6 +434,7 @@ final class PlayerModel {
         queue = []
         queueIndex = 0
         queueFinished = false
+        mode = .foreground
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     }
 

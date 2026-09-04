@@ -256,7 +256,7 @@ struct VideoDetailView: View {
                             .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
                     }
                     Button {
-                        withAnimation { app.player.setBackgroundMode(!app.player.backgroundMode) }
+                        withAnimation { app.player.toggleBackground() }
                     } label: {
                         Label("Background", systemImage: "headphones")
                             .font(.footnote.weight(.medium))
@@ -345,6 +345,12 @@ struct PlayerControlsOverlay: View {
     /// shown immediately and `seek(to:)` fires once on release.
     @State private var scrubTime: TimeInterval?
 
+    /// True while background playback is active (audio continues in the background).
+    /// Drives the inert headphone badge + the "x" exit button.
+    private var isBackgroundMode: Bool {
+        app.player.mode == .background || app.player.mode == .backgroundMiniplayer
+    }
+
     var body: some View {
         ZStack {
             LinearGradient(
@@ -353,7 +359,7 @@ struct PlayerControlsOverlay: View {
                 endPoint: .bottom
             )
             VStack(spacing: 0) {
-                if app.player.backgroundMode {
+                if isBackgroundMode {
                     headphoneIndicator
                 }
                 Spacer()
@@ -460,9 +466,9 @@ struct PlayerControlsOverlay: View {
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.white)
                 .frame(minWidth: 44, alignment: .leading)
-            if app.player.backgroundMode {
+            if isBackgroundMode {
                 Button {
-                    withAnimation { app.player.setBackgroundMode(false) }
+                    withAnimation { app.player.toggleBackground() }
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 17, weight: .semibold))

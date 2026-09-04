@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(AppModel.self) private var app
+    @Environment(\.scenePhase) private var scenePhase
 
     /// Clearance above the miniplayer so scroll content ends with a comfortable
     /// margin (more than the miniplayer's height) instead of scrolling under it.
@@ -23,6 +24,12 @@ struct ContentView: View {
             }
             .tint(Theme.accent)
             .onOpenURL { url in app.handleDeepLink(url) }
+            .onChange(of: scenePhase) { _, phase in
+                app.player.handleScenePhase(phase)
+            }
+            .onChange(of: app.focusedVideo == nil) { _, isMiniplayer in
+                app.player.updateMiniplayer(isMiniplayer)
+            }
 
             if let stream = app.focusedVideo {
                 VideoPlayerOverlay(stream: stream)
