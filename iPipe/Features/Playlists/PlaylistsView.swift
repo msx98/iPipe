@@ -392,7 +392,7 @@ struct PlaylistDetailScreen: View {
             }
         }
         .navigationTitle("")
-        .toolbar { playlistToolbar; StandardToolbar() }
+        .toolbar { StandardToolbar() }
         .sheet(isPresented: $model.showShareSheet) {
             ShareSheet(items: [model.shareText])
         }
@@ -509,49 +509,5 @@ struct PlaylistDetailScreen: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .disabled(model.isEditing || (playlist?.streams.isEmpty ?? true))
-    }
-
-    private var playlistToolbar: some ToolbarContent {
-        ToolbarItemGroup(placement: .topBarTrailing) {
-            Menu {
-                Button {
-                    Task { await model.playAll(app: app) }
-                } label: {
-                    Label("Play all", systemImage: "play.fill")
-                }
-                .disabled(model.isEditing || (playlist?.streams.isEmpty ?? true))
-
-                Button {
-                    Task { await model.removeDuplicates(app: app) }
-                } label: {
-                    Label("Remove duplicates", systemImage: "minus.forward.slash.plus")
-                }
-
-                if hasWatched {
-                    Button {
-                        model.showRemoveWatchedConfirm = true
-                    } label: {
-                        Label("Remove watched", systemImage: "clock.arrow.circlepath")
-                    }
-                }
-
-                Button {
-                    model.export(app: app)
-                } label: {
-                    Label("Share", systemImage: "square.and.arrow.up")
-                }
-
-                if let currentPlaylist = playlist {
-                    Button(role: .destructive) {
-                        app.playlists.delete(currentPlaylist)
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                    }
-                }
-            } label: {
-                Image(systemName: "ellipsis")
-            }
-            .tint(Theme.topBarButtonColor)
-        }
     }
 }
