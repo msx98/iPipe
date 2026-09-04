@@ -35,7 +35,7 @@ struct VideoPlayerOverlay: View {
                             .accessibilityLabel("Close")
                             .tint(.white)
                         }
-                        StandardToolbar(color: .white, showsPiP: true)
+                        StandardToolbar(color: .white)
                     }
                 }
                 .tint(Theme.accent)
