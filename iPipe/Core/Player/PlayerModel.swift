@@ -45,7 +45,11 @@ final class PlayerModel {
 
     func startPiP() {
         guard player != nil else { return }
-        guard let pip = pipController else { return }
+        guard let pip = pipController else {
+            NSLog("iPipe: PiP controller is nil")
+            return
+        }
+        NSLog("iPipe: PiP controller exists, pipPossible=%d pipActive=%d", pip.isPictureInPicturePossible ? 1 : 0, pip.isPictureInPictureActive ? 1 : 0)
         if pip.isPictureInPicturePossible {
             pip.startPictureInPicture()
         } else {
