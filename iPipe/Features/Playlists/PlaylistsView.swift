@@ -45,7 +45,7 @@ List {
             }
             .navigationTitle("Playlists")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button {
                         model.showCreateAlert = true
                     } label: {
@@ -96,9 +96,6 @@ List {
                     .foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
         }
         .contentShape(Rectangle())
     }

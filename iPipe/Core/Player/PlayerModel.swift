@@ -17,6 +17,7 @@ final class PlayerModel {
 
     var queue: [QueueItem] = []
     var queueIndex = 0
+    var queueFinished = false
     private var endObserver: NSObjectProtocol?
     private var timeObserver: Any?
     var currentTime: TimeInterval = 0
@@ -25,6 +26,7 @@ final class PlayerModel {
 
     func playQueue(_ items: [QueueItem], startAt: Int = 0) {
         guard !items.isEmpty else { return }
+        queueFinished = false
         removeEndObserver()
         queue = items
         queueIndex = max(0, min(startAt, items.count - 1))
@@ -36,19 +38,55 @@ final class PlayerModel {
     func playNext() {
         guard !queue.isEmpty else { return }
         if queueIndex + 1 < queue.count {
+            queueFinished = false
             queueIndex += 1
             let next = queue[queueIndex]
             play(stream: next.stream, formats: next.formats, prefer: next.prefer)
             registerEndObserver()
         } else {
-            queue = []
-            queueIndex = 0
-            removeEndObserver()
+            finishQueue()
         }
+    }
+
+    /// Called when the last item finishes: keep the queue intact so it can be
+    /// restarted, but stop playback and mark the queue as finished.
+    private func finishQueue() {
+        queueFinished = true
+        player?.pause()
+        isPlaying = false
+        currentTime = duration
+        removeEndObserver()
+        updateNowPlaying()
     }
 
     func onItemEnded() {
         playNext()
+    }
+
+    /// Restarts the queue from the first item (used from the finished state).
+    func restartQueue() {
+        guard !queue.isEmpty else { return }
+        queueFinished = false
+        playQueue(queue, startAt: 0)
+    }
+
+    /// Empties the queue and stops playback entirely.
+    func clearQueue() {
+        queueFinished = false
+        queue = []
+        queueIndex = 0
+        stop()
+    }
+
+    /// Moves queue items (drag-to-reorder), keeping the active index tracking
+    /// whichever stream was playing.
+    func moveQueueItem(fromOffsets offsets: IndexSet, toOffset destination: Int) {
+        guard offsets.first != nil else { return }
+        let activeID = queueIndex < queue.count ? queue[queueIndex].stream.id : nil
+        queue.move(fromOffsets: offsets, toOffset: destination)
+        if let id = activeID, let newIndex = queue.firstIndex(where: { $0.stream.id == id }) {
+            queueIndex = newIndex
+        }
     }
 
     func seek(to time: TimeInterval) {
@@ -146,6 +184,7 @@ final class PlayerModel {
     func play(stream: StreamItem, formats: [VideoFormat], prefer: VideoFormat?) {
         setupAudioSession()
         registerRemoteCommands()
+        queueFinished = false
         // Keep the latent queue consistent: a brand-new video collapses the queue
         // to just that video; re-selecting the current one (e.g. quality change)
         // updates its entry in place without disturbing the rest of the queue.
@@ -202,6 +241,7 @@ final class PlayerModel {
         currentTime = 0
         queue = []
         queueIndex = 0
+        queueFinished = false
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     }
 
@@ -209,6 +249,7 @@ final class PlayerModel {
     /// end-of-stream trigger so the rest of the queue keeps advancing).
     func playFromQueue(at index: Int) {
         guard index >= 0, index < queue.count else { return }
+        queueFinished = false
         queueIndex = index
         let item = queue[index]
         play(stream: item.stream, formats: item.formats, prefer: item.prefer)

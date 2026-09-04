@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// Full-screen queue view. Lists the latent playback queue and pins a sticky
-/// playback-control bar at the bottom (seek slider, time labels, skip/forward/
-/// previous/toggle play-pause). Controls are grayed out when the queue is empty.
+/// playback-control bar at the bottom (seek slider, time labels, previous/-10/
+/// play-pause-or-restart/+10/next). Controls are grayed out when nothing is
+/// active; when the queue finishes it stays intact and just shows "Not Playing".
 struct QueueScreen: View {
     @Environment(AppModel.self) private var app
 
@@ -17,12 +18,21 @@ struct QueueScreen: View {
                 duration: app.player.currentDuration,
                 isPlaying: app.player.isPlaying,
                 hasQueue: !app.player.queue.isEmpty,
-                hasActiveVideo: app.player.hasItem
+                hasActiveVideo: app.player.hasItem,
+                queueFinished: app.player.queueFinished
             )
         }
         .background(Color(.systemBackground))
         .navigationTitle("Up Next")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Clear", role: .destructive) {
+                    app.player.clearQueue()
+                }
+                .disabled(app.player.queue.isEmpty)
+            }
+        }
     }
 
     @ViewBuilder
@@ -70,13 +80,18 @@ struct QueueScreen: View {
                         }
                     }
                 }
+                .onMove { offsets, destination in
+                    app.player.moveQueueItem(fromOffsets: offsets, toOffset: destination)
+                }
             }
             .listStyle(.plain)
+            .environment(\.editMode, .constant(.active))
         }
     }
 }
 
-/// Sticky bottom playback controls.
+/// Sticky bottom playback controls. Order: previous, back 10s, play/pause
+/// (or restart when the queue is finished), forward 10s, next.
 private struct PlaybackControlsBar: View {
     @Environment(AppModel.self) private var app
     let label: String
@@ -86,14 +101,17 @@ private struct PlaybackControlsBar: View {
     let isPlaying: Bool
     let hasQueue: Bool
     let hasActiveVideo: Bool
+    let queueFinished: Bool
+
+    private var showPlaybackInfo: Bool { hasActiveVideo && !queueFinished }
 
     var body: some View {
         VStack(spacing: 10) {
-            if hasActiveVideo {
+            if showPlaybackInfo {
                 currentInfo
                 progressSlider
             } else {
-                Text("Nothing playing")
+                Text("Not Playing")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -106,7 +124,7 @@ private struct PlaybackControlsBar: View {
                     Image(systemName: "backward.end.fill")
                         .font(.title2)
                 }
-                .disabled(!hasActiveVideo)
+                .disabled(!showPlaybackInfo)
                 .buttonStyle(.plain)
                 .accessibilityLabel("Previous")
 
@@ -116,18 +134,11 @@ private struct PlaybackControlsBar: View {
                     Image(systemName: "gobackward.10")
                         .font(.title2)
                 }
-                .disabled(!hasActiveVideo)
+                .disabled(!showPlaybackInfo)
                 .buttonStyle(.plain)
                 .accessibilityLabel("Back 10 seconds")
 
-                Button {
-                    app.player.togglePlayPause()
-                } label: {
-                    Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.system(size: 44))
-                }
-                .disabled(!hasActiveVideo)
-                .buttonStyle(.plain)
+                middleButton
 
                 Button {
                     app.player.skipForward()
@@ -135,7 +146,7 @@ private struct PlaybackControlsBar: View {
                     Image(systemName: "goforward.10")
                         .font(.title2)
                 }
-                .disabled(!hasActiveVideo)
+                .disabled(!showPlaybackInfo)
                 .buttonStyle(.plain)
                 .accessibilityLabel("Forward 10 seconds")
 
@@ -145,7 +156,7 @@ private struct PlaybackControlsBar: View {
                     Image(systemName: "forward.end.fill")
                         .font(.title2)
                 }
-                .disabled(!hasQueue)
+                .disabled(!showPlaybackInfo)
                 .buttonStyle(.plain)
                 .accessibilityLabel("Next")
             }
@@ -153,6 +164,29 @@ private struct PlaybackControlsBar: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
+    private var middleButton: some View {
+        if queueFinished {
+            Button {
+                app.player.restartQueue()
+            } label: {
+                Image(systemName: "arrow.counterclockwise.circle.fill")
+                    .font(.system(size: 44))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Restart queue")
+        } else {
+            Button {
+                app.player.togglePlayPause()
+            } label: {
+                Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                    .font(.system(size: 44))
+            }
+            .disabled(!hasActiveVideo)
+            .buttonStyle(.plain)
+        }
     }
 
     private var currentInfo: some View {
