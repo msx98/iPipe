@@ -422,10 +422,6 @@ struct PlaylistDetailScreen: View {
                     .listRowInsets(EdgeInsets())
             }
             Section {
-                playAllButton
-                    .listRowInsets(EdgeInsets())
-            }
-            Section {
                 ForEach(Array(playlist.streams.enumerated()), id: \.element.id) { index, item in
                     PlaylistRowCell(
                         thumbnailURL: item.stream.thumbnailURL,
@@ -474,8 +470,11 @@ struct PlaylistDetailScreen: View {
                 withAnimation { model.isEditing.toggle() }
             } label: {
                 Image(systemName: model.isEditing ? "checkmark.circle" : "pencil")
+                    .font(.title3)
+                    .foregroundStyle(.tint)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bordered)
+            .clipShape(Circle())
             VStack(alignment: .leading, spacing: 2) {
                 Text(playlist.name)
                     .font(.title3.weight(.bold))
@@ -491,23 +490,4 @@ struct PlaylistDetailScreen: View {
         .padding(.vertical, 10)
     }
 
-    @ViewBuilder
-    private var playAllButton: some View {
-        Button {
-            Task { await model.playAll(app: app) }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "play.circle.fill")
-                    .font(.title2)
-                Text("Play")
-                    .font(.headline)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .disabled(model.isEditing || (playlist?.streams.isEmpty ?? true))
-    }
 }
