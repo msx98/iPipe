@@ -115,7 +115,7 @@ struct LocalPlayerView: View {
                     Button {
                         app.player.togglePlayPause()
                     } label: {
-                        Image(systemName: app.player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                        Image(systemName: app.player.playState ? "pause.circle.fill" : "play.circle.fill")
                             .font(.system(size: 44))
                     }
                 }

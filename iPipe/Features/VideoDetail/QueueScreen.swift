@@ -16,7 +16,7 @@ struct QueueScreen: View {
                 detail: app.player.currentAuthor,
                 currentTime: app.player.currentTime,
                 duration: app.player.currentDuration,
-                isPlaying: app.player.isPlaying,
+                playState: app.player.playState,
                 hasQueue: !app.player.queue.isEmpty,
                 hasActiveVideo: app.player.hasItem,
                 queueFinished: app.player.queueFinished
@@ -104,7 +104,7 @@ private struct PlaybackControlsBar: View {
     let detail: String
     let currentTime: TimeInterval
     let duration: TimeInterval
-    let isPlaying: Bool
+    let playState: Bool
     let hasQueue: Bool
     let hasActiveVideo: Bool
     let queueFinished: Bool
@@ -187,7 +187,7 @@ private struct PlaybackControlsBar: View {
             Button {
                 app.player.togglePlayPause()
             } label: {
-                Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                Image(systemName: playState ? "pause.circle.fill" : "play.circle.fill")
                     .font(.system(size: 44))
             }
             .disabled(!hasActiveVideo)
