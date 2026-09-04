@@ -117,17 +117,32 @@ struct VideoDetailView: View {
         VStack(spacing: 8) {
             Group {
                 if app.player.hasItem {
-                    ZStack {
-                        PlayerLayerRepresentable(view: app.player.playerLayerView)
-                        if showControls {
-                            PlayerControlsOverlay(
-                                isFullscreen: isFullscreen,
-                                onFullscreen: { isFullscreen = true }
-                            )
+                    if app.player.videoOutput == .background {
+                        ZStack {
+                            Color.black
+                            backgroundPlaceholder
+                            if showControls {
+                                PlayerControlsOverlay(
+                                    isFullscreen: isFullscreen,
+                                    onFullscreen: { isFullscreen = true }
+                                )
+                            }
                         }
+                        .contentShape(Rectangle())
+                        .onTapGesture { toggleControls() }
+                    } else {
+                        ZStack {
+                            PlayerLayerRepresentable(view: app.player.playerLayerView)
+                            if showControls {
+                                PlayerControlsOverlay(
+                                    isFullscreen: isFullscreen,
+                                    onFullscreen: { isFullscreen = true }
+                                )
+                            }
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture { toggleControls() }
                     }
-                    .contentShape(Rectangle())
-                    .onTapGesture { toggleControls() }
                 } else {
                     ZStack {
                         Rectangle().fill(.black)
