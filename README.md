@@ -1,14 +1,11 @@
-# iPipe
+# <img src="assets/icon.svg" height="24" align="bottom"> iPipe
 
-A Swift/SwiftUI port of the [NewPipe](https://newpipe.net) YouTube client. Pure Swift, zero third-party dependencies, iOS 18+, Swift 5.
+
+An iOS YouTube client with background play and more. Pure Swift, zero third-party dependencies, iOS 18+, Swift 5.
+
+[Release Page](../../releases/latest): IPAs are unsigned, but you can use an app like [Feather](../../../../claration/Feather) to sign and install it on your device. Note that sign-ins will only work if you set a keychain access group: $TEAMID.ax.lx.ipipe
 
 > **Disclaimer**: An experimental personal project. Not affiliated with Google or YouTube. For private/research use only — respect YouTube's Terms of Service in any real deployment.
-
-IPA download is in [the releases page](../../releases/latest).
-
-It is unsigned, but you can use an app like [Feather](../../../../claration/Feather) to sign and install it on your device.
-
-Note that sign-ins will only work if you set a keychain access group: $TEAMID.ax.lx.ipipe
 
 ## Screenshots
 
@@ -20,12 +17,11 @@ Note that sign-ins will only work if you set a keychain access group: $TEAMID.ax
 ## Features
 
 - Full **video detail/player** screen — metadata, description, related videos, and a quality picker
-- **Local playlists** — create, append, reorder, dedupe, remove watched, and play as a sequential queue; share/export as URLs or a YouTube temporary playlist
 - **Downloads** — video (≤1080p) and audio (itag 140), with per-part progress, saved under `Documents/Downloads/`
-- Picture-in-style background audio playback (synthetic HLS manifests via [`HLSResourceLoader`/`HLSBuilder`](iPipe/Core/Player/PlayerModel.swift))
-- Account flows: in-app **Youtube login** (`WKWebView`), cookie import/export, signed request signing
-- Interchangeable backend: real **InnerTube** extraction vs an offline **Sample** data source (switch in Settings)
-- Deep links: opening `ipipe://<youtube-video-id>` jumps straight into the player
+- **Local playlists** — create, append, reorder, dedupe, remove watched, and play as a sequential queue; share/export as URLs or a YouTube temporary playlist
+- Background audio playback
+- Account login, cookies.txt import/export
+- Planned: Netflix-style PiP video playback
 
 ## Build & install
 
@@ -65,14 +61,14 @@ make ARCH=simulator install COOKIESFILE=./cookies.txt UDID_IPHONE=00008150-xxxxx
 ```
 iPipe/                    iOS Swift source (the app)
   Core/                     app state, models, extraction, services, player, theme
-  Features/                 one screen per folder (Trending, Search, Subscriptions, VideoDetail, Channel, Settings, Downloads)
+  Features/                 one screen per folder (Trending, Search, Subscriptions, VideoDetail, Channel, Playlists, Settings, Downloads)
   Shared/Components/        reusable SwiftUI views
 iPipe.xcodeproj/          single-target Xcode project
 tools/push_cookies.py     house_arrest cookie delivery for real devices
 Makefile                  build / install / launch pipeline
 ```
 
-Key entry points: `iPipe/iPipeApp.swift` (`@main`), `iPipe/ContentView.swift` (root 4-tab `TabView` + mini player), `iPipe/Core/AppModel.swift` (central `@Observable` state).
+Key entry points: `iPipe/iPipeApp.swift` (`@main`), `iPipe/ContentView.swift` (root 5-tab `TabView` + mini player), `iPipe/Core/AppModel.swift` (central `@Observable` state).
 
 ## Signing note
 
