@@ -126,15 +126,32 @@ final class PlayerModel {
 
     init() {
         pipController = AVPictureInPictureController(playerLayer: playerLayerView.playerLayer)
+        // Never let the system auto-enter PiP when the app backgrounds. With this
+        // disabled, backgrounding simply continues background audio (the shared
+        // `AVAudioSession` `.playback` session + `UIBackgroundModes` = audio); a
+        // PiP window only ever appears via an explicit `startPiP()` request, which
+        // sets `videoOutput = .pip` first.
+        pipController?.canStartPictureInPictureAutomaticallyFromInline = false
         pipController?.delegate = pipDelegate
         pipDelegate.onStateChange = { [weak self] active in
             MainActor.assumeIsolated {
                 guard let self else { return }
-                self.isPiPActive = active
                 if active {
+                    // Guarantee: the PiP window appears ONLY when `videoOutput == .pip`.
+                    // If a PiP somehow starts in any other mode (e.g. a stale
+                    // backgrounding race), reject it immediately and keep audio going.
+                    guard self.videoOutput == .pip else {
+                        self.isPiPActive = false
+                        self.pipController?.stopPictureInPicture()
+                        return
+                    }
+                    self.isPiPActive = true
                     self.setVideoOutput(.pip)
-                } else if self.videoOutput == .pip {
-                    self.setVideoOutput(.normal)
+                } else {
+                    self.isPiPActive = false
+                    if self.videoOutput == .pip {
+                        self.setVideoOutput(.normal)
+                    }
                 }
             }
         }
