@@ -42,6 +42,9 @@ struct VideoDetailView: View {
     @State private var model = VideoDetailModel()
     @State private var showDescription = false
     @State private var showAddToPlaylist = false
+    @State private var isFullscreen = false
+    @State private var showControls = true
+    @State private var controlsTask: Task<Void, Never>?
 
     var body: some View {
         Group {
@@ -65,6 +68,9 @@ struct VideoDetailView: View {
         }
         .sheet(isPresented: $showAddToPlaylist) {
             AddToPlaylistSheet(stream: model.stream ?? stream)
+        }
+        .fullScreenCover(isPresented: $isFullscreen) {
+            FullscreenPlayerView(onExit: { isFullscreen = false })
         }
     }
 
@@ -111,7 +117,17 @@ struct VideoDetailView: View {
         VStack(spacing: 8) {
             Group {
                 if app.player.hasItem {
-                    PlayerLayerRepresentable(view: app.player.playerLayerView)
+                    ZStack {
+                        PlayerLayerRepresentable(view: app.player.playerLayerView)
+                        if showControls {
+                            PlayerControlsOverlay(
+                                isFullscreen: isFullscreen,
+                                onFullscreen: { isFullscreen = true }
+                            )
+                        }
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { toggleControls() }
                 } else {
                     ZStack {
                         Rectangle().fill(.black)
@@ -155,6 +171,28 @@ struct VideoDetailView: View {
                     .font(.footnote.weight(.medium))
                 }
                 Spacer()
+            }
+        }
+    }
+
+    private func toggleControls() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showControls.toggle()
+        }
+        if showControls {
+            scheduleAutoHide()
+        } else {
+            controlsTask?.cancel()
+        }
+    }
+
+    private func scheduleAutoHide() {
+        controlsTask?.cancel()
+        controlsTask = Task {
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            guard !Task.isCancelled else { return }
+            if app.player.isPlaying {
+                withAnimation(.easeOut(duration: 0.25)) { showControls = false }
             }
         }
     }
@@ -267,5 +305,134 @@ struct PlayerLayerRepresentable: UIViewRepresentable {
 
     func updateUIView(_ uiView: PlayerLayerView, context: Context) {
         // The player is synced onto the layer by PlayerModel on playback changes.
+    }
+}
+
+/// Playback controls overlaid on the video surface: a center play/pause button,
+/// a seek slider with current/duration time labels, and a fullscreen toggle, all
+/// over a subtle black scrim so they stay readable in light or dark mode.
+/// Tapping anywhere on the video (outside a control) is handled by the container.
+struct PlayerControlsOverlay: View {
+    @Environment(AppModel.self) private var app
+    let isFullscreen: Bool
+    let onFullscreen: () -> Void
+
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [.black.opacity(0.35), .clear, .black.opacity(0.6)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            VStack(spacing: 0) {
+                Spacer()
+                playPauseButton
+                Spacer()
+                bottomBar
+            }
+        }
+    }
+
+    private var playPauseButton: some View {
+        Button {
+            app.player.togglePlayPause()
+        } label: {
+            Image(systemName: app.player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                .font(.system(size: 52))
+                .foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.5), radius: 4)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(app.player.isPlaying ? "Pause" : "Play")
+    }
+
+    private var bottomBar: some View {
+        HStack(spacing: 10) {
+            Text(app.player.currentTime.durationText)
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.white)
+                .frame(minWidth: 44, alignment: .trailing)
+            Slider(
+                value: Binding(
+                    get: { min(app.player.currentTime, app.player.currentDuration) },
+                    set: { app.player.seek(to: $0) }
+                ),
+                in: 0...app.player.currentDuration
+            )
+            .tint(.white)
+            Text(app.player.currentDuration.durationText)
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.white)
+                .frame(minWidth: 44, alignment: .leading)
+            Button {
+                onFullscreen()
+            } label: {
+                Image(systemName: isFullscreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.5), radius: 3)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isFullscreen ? "Exit fullscreen" : "Fullscreen")
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 10)
+    }
+}
+
+/// Full-screen presentation of the player (black background, hidden system UI).
+/// Uses its own `PlayerLayerView` so it can coexist with the inline surface
+/// (a `UIView` can only live in one place at a time) while still showing the
+/// shared `AVPlayer`. Controls mirror the inline overlay; the fullscreen button
+/// becomes an "exit" button.
+struct FullscreenPlayerView: View {
+    @Environment(AppModel.self) private var app
+    let onExit: () -> Void
+    @State private var layerView = PlayerLayerView()
+    @State private var showControls = true
+    @State private var controlsTask: Task<Void, Never>?
+
+    var body: some View {
+        ZStack {
+            Color.black
+            PlayerLayerRepresentable(view: layerView)
+                .onAppear { syncPlayer() }
+            if showControls {
+                PlayerControlsOverlay(
+                    isFullscreen: true,
+                    onFullscreen: { onExit() }
+                )
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { toggleControls() }
+        .ignoresSafeArea()
+        .statusBarHidden(true)
+    }
+
+    private func syncPlayer() {
+        layerView.playerLayer.player = app.player.player
+    }
+
+    private func toggleControls() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showControls.toggle()
+        }
+        if showControls {
+            scheduleAutoHide()
+        } else {
+            controlsTask?.cancel()
+        }
+    }
+
+    private func scheduleAutoHide() {
+        controlsTask?.cancel()
+        controlsTask = Task {
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            guard !Task.isCancelled else { return }
+            if app.player.isPlaying {
+                withAnimation(.easeOut(duration: 0.25)) { showControls = false }
+            }
+        }
     }
 }

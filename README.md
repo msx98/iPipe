@@ -10,8 +10,14 @@ An iOS YouTube client with background play and more. Pure Swift, zero third-part
 ## Screenshots
 
 <p>
-  <img src="assets/screenshots/screenshot-1.png" width="300" alt="iPipe screenshot 1" />
-  <img src="assets/screenshots/screenshot-2.png" width="300" alt="iPipe screenshot 2" />
+  <img src="assets/screenshots/screenshot-1.png" width="32%" alt="iPipe screenshot 1" />
+  <img src="assets/screenshots/screenshot-2.png" width="32%" alt="iPipe screenshot 2" />
+  <img src="assets/screenshots/screenshot-3.png" width="32%" alt="iPipe screenshot 3" />
+</p>
+<p>
+  <img src="assets/screenshots/screenshot-4.png" width="32%" alt="iPipe screenshot 4" />
+  <img src="assets/screenshots/screenshot-5.png" width="32%" alt="iPipe screenshot 5" />
+  <img src="assets/screenshots/screenshot-6.png" width="32%" alt="iPipe screenshot 6" />
 </p>
 
 ## Features
