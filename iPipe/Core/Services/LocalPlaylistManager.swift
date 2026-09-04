@@ -53,6 +53,11 @@ final class LocalPlaylistManager {
         save()
     }
 
+    func move(from offsets: IndexSet, to destination: Int) {
+        playlists.move(fromOffsets: offsets, toOffset: destination)
+        save()
+    }
+
     func moveItem(from offsets: IndexSet, to destination: Int, in playlist: LocalPlaylist) {
         guard let idx = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
         playlists[idx].streams.move(fromOffsets: offsets, toOffset: destination)

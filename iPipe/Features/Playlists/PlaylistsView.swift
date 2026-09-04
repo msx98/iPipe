@@ -8,6 +8,9 @@ import UIKit
 final class PlaylistsListModel {
     var showCreateAlert = false
     var newPlaylistName = ""
+    var isEditing = false
+    var pendingDeletePlaylist: LocalPlaylist?
+    var deleteConfirmPresented = false
 
     /// Creates an empty playlist via the manager (empty name is rejected, but an
     /// empty stream list is allowed), then clears the prompt state.
@@ -16,10 +19,116 @@ final class PlaylistsListModel {
         newPlaylistName = ""
         showCreateAlert = false
     }
+
+    /// Performs the confirmed deletion of the playlist read from the list.
+    func deletePendingPlaylist(app: AppModel) {
+        guard let playlist = pendingDeletePlaylist else { return }
+        app.playlists.delete(playlist)
+        pendingDeletePlaylist = nil
+        deleteConfirmPresented = false
+        if app.playlists.playlists.isEmpty { isEditing = false }
+    }
+}
+
+/// Small trailing accessory shown on every playlists row: an "×" that removes the
+/// row while editing, or a chevron when idle.
+struct PlaylistRowAccessory: View {
+    let isEditing: Bool
+    let onDelete: () -> Void
+
+    var body: some View {
+        if isEditing {
+            Button(action: onDelete) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+        } else {
+            Image(systemName: "chevron.right")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+    }
+}
+
+/// Shared playlists row used by both the playlists home list and a playlist's
+/// detail list. It standardizes the edit-mode affordances (a leading reorder
+/// handle via a 180° flip of the native control, and a trailing "×"/chevron
+/// accessory) so both screens behave identically. `onTap` is applied only to the
+/// leading thumbnail/title so the trailing accessory stays independently
+/// tappable; pass `nil` while editing.
+struct PlaylistRowCell: View {
+    let thumbnailURL: URL?
+    let videoId: String
+    let thumbnailWidth: CGFloat
+    let title: String
+    let subtitle: String
+    let isEditing: Bool
+    var titleBinding: Binding<String>? = nil
+    var titleFont: Font = .subheadline.weight(.semibold)
+    var subtitleFont: Font = .caption
+    var onTap: (() -> Void)?
+    let onDelete: () -> Void
+
+    var body: some View {
+        ZStack {
+            HStack(spacing: 12) {
+                leading
+                Spacer(minLength: 0)
+                PlaylistRowAccessory(isEditing: isEditing, onDelete: onDelete)
+            }
+            .rotationEffect(.degrees(-180))
+        }
+        .rotationEffect(.degrees(180))
+        .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private var leading: some View {
+        if let onTap {
+            Button(action: onTap) {
+                leadingContent
+            }
+            .buttonStyle(.plain)
+            .contentShape(Rectangle())
+        } else {
+            leadingContent
+        }
+    }
+
+    @ViewBuilder
+    private var leadingContent: some View {
+        HStack(spacing: 12) {
+            AsyncThumbnail(url: thumbnailURL, videoId: videoId)
+                .frame(width: thumbnailWidth)
+            VStack(alignment: .leading, spacing: 2) {
+                titleView
+                Text(subtitle)
+                    .font(subtitleFont)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var titleView: some View {
+        if isEditing, let titleBinding {
+            TextField("Name", text: titleBinding)
+                .font(titleFont)
+        } else {
+            Text(title)
+                .font(titleFont)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+    }
 }
 
 /// Top-level playlists screen: list of local playlists with an empty state,
-/// swipe-to-delete, and a "New" action that prompts for a name.
+/// swipe-to-delete, an edit mode (left reorder handle, "×" per row, rename the
+/// name inline), and a "New" action that prompts for a name.
 struct PlaylistsView: View {
     @Environment(AppModel.self) private var app
     @State private var model = PlaylistsListModel()
@@ -35,12 +144,16 @@ struct PlaylistsView: View {
                         description: Text("Add videos from any video page.")
                     )
                 } else {
-List {
+                    List {
                         ForEach(app.playlists.playlists) { playlist in
                             playlistCell(playlist)
                         }
+                        .onMove { offsets, destination in
+                            app.playlists.move(from: offsets, to: destination)
+                        }
                     }
                     .listStyle(.insetGrouped)
+                    .environment(\.editMode, .constant(model.isEditing ? .active : .inactive))
                 }
             }
             .navigationTitle("Playlists")
@@ -51,6 +164,13 @@ List {
                     } label: {
                         Image(systemName: "plus")
                     }
+                    .tint(Theme.topBarButtonColor)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(model.isEditing ? "Done" : "Edit") {
+                        withAnimation { model.isEditing.toggle() }
+                    }
+                    .disabled(app.playlists.playlists.isEmpty)
                     .tint(Theme.topBarButtonColor)
                 }
                 StandardToolbar()
@@ -64,6 +184,16 @@ List {
                     model.showCreateAlert = false
                 }
             }
+            .alert("Delete playlist?", isPresented: $model.deleteConfirmPresented) {
+                Button("Delete", role: .destructive) {
+                    model.deletePendingPlaylist(app: app)
+                }
+                Button("Cancel", role: .cancel) {
+                    model.deleteConfirmPresented = false
+                }
+            } message: {
+                Text("This playlist will be deleted.")
+            }
             .navigationDestination(for: String.self) { playlistID in
                 PlaylistDetailScreen(playlistID: playlistID)
             }
@@ -72,33 +202,33 @@ List {
 
     @ViewBuilder
     private func playlistCell(_ playlist: LocalPlaylist) -> some View {
-        NavigationLink(value: playlist.id) {
-            playlistRow(playlist)
-        }
+        PlaylistRowCell(
+            thumbnailURL: playlist.thumbnailURL,
+            videoId: playlist.streams.first?.id ?? "",
+            thumbnailWidth: 96,
+            title: playlist.name,
+            subtitle: "\(playlist.streamCount) items · \(playlist.totalDuration.durationText)",
+            isEditing: model.isEditing,
+            titleBinding: Binding(
+                get: { playlist.name },
+                set: { newValue in
+                    if !newValue.isEmpty { app.playlists.rename(playlist, to: newValue) }
+                }
+            ),
+            onTap: model.isEditing ? nil : { app.playlistsPath.append(playlist.id) },
+            onDelete: {
+                model.pendingDeletePlaylist = playlist
+                model.deleteConfirmPresented = true
+            }
+        )
         .swipeActions(edge: .trailing) {
             Button(role: .destructive) {
-                app.playlists.delete(playlist)
+                model.pendingDeletePlaylist = playlist
+                model.deleteConfirmPresented = true
             } label: {
                 Label("Delete", systemImage: "trash")
             }
         }
-    }
-
-    private func playlistRow(_ playlist: LocalPlaylist) -> some View {
-        HStack(spacing: 12) {
-            AsyncThumbnail(url: playlist.thumbnailURL, videoId: playlist.streams.first?.id ?? "")
-                .frame(width: 96)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(playlist.name)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
-                Text("\(playlist.streamCount) items · \(playlist.totalDuration.durationText)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 0)
-        }
-        .contentShape(Rectangle())
     }
 }
 
@@ -106,8 +236,6 @@ List {
 @Observable
 @MainActor
 final class PlaylistDetailModel {
-    var showRenameAlert = false
-    var newName = ""
     var showShareSheet = false
     var shareText = ""
     var showRemoveWatchedConfirm = false
@@ -132,14 +260,6 @@ final class PlaylistDetailModel {
         guard let item = pendingDeleteItem, let playlist = refreshPlaylist(app: app) else { return }
         app.playlists.removeItem(item, from: playlist)
         pendingDeleteItem = nil
-    }
-
-    func rename(to name: String, app: AppModel) {
-        guard let playlist = refreshPlaylist(app: app) else { return }
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        app.playlists.rename(playlist, to: trimmed)
-        showRenameAlert = false
     }
 
     func removeDuplicates(app: AppModel) async {
@@ -203,8 +323,9 @@ final class PlaylistDetailModel {
     }
 }
 
-/// Detail screen for a single local playlist: header with rename, an ordered,
-/// reorderable/reorderable list of its videos, and a menu of playlist actions.
+/// Detail screen for a single local playlist: header with an edit toggle, a Play
+/// button, an ordered, reorderable list of its videos (leading reorder handle and
+/// a trailing "×"/chevron), and a menu of playlist actions.
 struct PlaylistDetailScreen: View {
     @Environment(AppModel.self) private var app
     let playlistID: String
@@ -248,14 +369,6 @@ struct PlaylistDetailScreen: View {
         }
         .navigationTitle("")
         .toolbar { playlistToolbar }
-        .tint(Theme.topBarButtonColor)
-        .alert("Rename Playlist", isPresented: $model.showRenameAlert) {
-            TextField("Name", text: $model.newName)
-            Button("Save") {
-                model.rename(to: model.newName, app: app)
-            }
-            Button("Cancel", role: .cancel) {}
-        }
         .sheet(isPresented: $model.showShareSheet) {
             ShareSheet(items: [model.shareText])
         }
@@ -285,14 +398,27 @@ struct PlaylistDetailScreen: View {
                     .listRowInsets(EdgeInsets())
             }
             Section {
+                playAllButton
+                    .listRowInsets(EdgeInsets())
+            }
+            Section {
                 ForEach(Array(playlist.streams.enumerated()), id: \.element.id) { index, item in
-                    Button {
-                        app.focusedVideo = item.stream
-                        Task { await model.playItem(at: index, app: app) }
-                    } label: {
-                        streamRow(item.stream)
-                    }
-                    .buttonStyle(.plain)
+                    PlaylistRowCell(
+                        thumbnailURL: item.stream.thumbnailURL,
+                        videoId: item.stream.id,
+                        thumbnailWidth: 140,
+                        title: item.stream.title,
+                        subtitle: item.stream.author,
+                        isEditing: model.isEditing,
+                        onTap: model.isEditing ? nil : {
+                            app.focusedVideo = item.stream
+                            Task { await model.playItem(at: index, app: app) }
+                        },
+                        onDelete: {
+                            model.pendingDeleteItem = item
+                            model.removeItemDialogPresented = true
+                        }
+                    )
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
                             model.pendingDeleteItem = item
@@ -321,10 +447,9 @@ struct PlaylistDetailScreen: View {
     private func headerRow(_ playlist: LocalPlaylist) -> some View {
         HStack(spacing: 10) {
             Button {
-                model.newName = playlist.name
-                model.showRenameAlert = true
+                withAnimation { model.isEditing.toggle() }
             } label: {
-                Image(systemName: "pencil")
+                Image(systemName: model.isEditing ? "checkmark.circle" : "pencil")
             }
             .buttonStyle(.plain)
             VStack(alignment: .leading, spacing: 2) {
@@ -337,61 +462,40 @@ struct PlaylistDetailScreen: View {
                     .foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
-            Button {
-                Task { await model.playAll(app: app) }
-            } label: {
-                Image(systemName: "play.circle.fill")
-                    .font(.title2)
-            }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
     }
 
-    private func streamRow(_ stream: StreamItem) -> some View {
-        HStack(spacing: 12) {
-            AsyncThumbnail(url: stream.thumbnailURL, videoId: stream.id)
-                .frame(width: 140)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(stream.title)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(2)
-                    .truncationMode(.tail)
-                Text(stream.author)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+    @ViewBuilder
+    private var playAllButton: some View {
+        Button {
+            Task { await model.playAll(app: app) }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "play.circle.fill")
+                    .font(.title2)
+                Text("Play")
+                    .font(.headline)
             }
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
-        .contentShape(Rectangle())
-        .padding(.trailing, 8)
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .disabled(model.isEditing || (playlist?.streams.isEmpty ?? true))
     }
 
     private var playlistToolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .topBarTrailing) {
-            Button(model.isEditing ? "Done" : "Edit") {
-                withAnimation { model.isEditing.toggle() }
-            }
-            .disabled(playlist?.streams.isEmpty ?? true)
-            .tint(Theme.topBarButtonColor)
             Menu {
                 Button {
                     Task { await model.playAll(app: app) }
                 } label: {
                     Label("Play all", systemImage: "play.fill")
                 }
-                .disabled(playlist?.streams.isEmpty ?? true)
-
-                Button {
-                    if let name = playlist?.name {
-                        model.newName = name
-                    }
-                    model.showRenameAlert = true
-                } label: {
-                    Label("Rename", systemImage: "pencil")
-                }
+                .disabled(model.isEditing || (playlist?.streams.isEmpty ?? true))
 
                 Button {
                     Task { await model.removeDuplicates(app: app) }
