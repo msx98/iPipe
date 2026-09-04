@@ -2,7 +2,6 @@ import SwiftUI
 
 struct SubscriptionsView: View {
     @Environment(AppModel.self) private var app
-    @State private var showHistory = false
 
     var body: some View {
         @Bindable var app = app
@@ -29,24 +28,14 @@ struct SubscriptionsView: View {
             }
             .navigationTitle("Subscriptions")
             .toolbar { StandardToolbar() }
-            .sheet(isPresented: $showHistory) {
-                NavigationStack {
-                    HistoryView()
-                        .toolbar {
-                            ToolbarItem(placement: .topBarTrailing) {
-                                Button("Done") { showHistory = false }
-                            }
-                        }
-                }
-            }
             .navigationDestination(for: ChannelItem.self) { ChannelView(channel: $0) }
-            .navigationDestination(for: StreamItem.self) { VideoDetailView(stream: $0) }
         }
     }
 }
 
 struct HistoryView: View {
     @Environment(AppModel.self) private var app
+    @State private var showClearConfirm = false
 
     var body: some View {
         Group {
@@ -55,7 +44,9 @@ struct HistoryView: View {
             } else {
                 List {
                     ForEach(app.history) { stream in
-                        NavigationLink(value: stream) {
+                        Button {
+                            app.focusedVideo = stream
+                        } label: {
                             HStack(spacing: 12) {
                                 AsyncThumbnail(url: stream.thumbnailURL, videoId: stream.id)
                                     .frame(width: 130)
@@ -66,6 +57,7 @@ struct HistoryView: View {
                             }
                             .padding(.vertical, 2)
                         }
+                        .buttonStyle(.plain)
                     }
                     .onDelete { indexSet in
                         app.history.remove(atOffsets: indexSet)
@@ -76,13 +68,17 @@ struct HistoryView: View {
         }
         .navigationTitle("History")
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
                 Button("Clear", role: .destructive) {
-                    app.clearHistory()
+                    showClearConfirm = true
                 }
                 .disabled(app.history.isEmpty)
+                Button("Done") {
+                    app.showHistorySheet = false
+                }
+                .tint(Theme.topBarButtonColor)
             }
         }
-        .navigationDestination(for: StreamItem.self) { VideoDetailView(stream: $0) }
+        .modifier(ClearHistoryConfirmation(isPresented: $showClearConfirm, onClear: app.clearHistory))
     }
 }

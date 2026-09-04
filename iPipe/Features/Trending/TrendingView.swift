@@ -42,12 +42,7 @@ struct TrendingView: View {
                     ScrollView {
                         LazyVStack(spacing: 18) {
                             ForEach(model.items) { stream in
-                                Button {
-                                    app.focusedVideo = stream
-                                } label: {
-                                    StreamCard(stream: stream)
-                                }
-                                .buttonStyle(.plain)
+                                StreamCell(stream: stream)
                             }
                         }
                         .padding(.horizontal)

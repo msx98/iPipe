@@ -3,6 +3,7 @@ import SwiftUI
 /// The shared top-right toolbar: Downloads, queue view, and history.
 struct StandardToolbar: ToolbarContent {
     @Environment(AppModel.self) private var app
+    var color: Color = Theme.topBarButtonColor
 
     var body: some ToolbarContent {
         ToolbarItemGroup(placement: .topBarTrailing) {
@@ -12,6 +13,7 @@ struct StandardToolbar: ToolbarContent {
                 Image(systemName: "arrow.down.circle")
             }
             .accessibilityLabel("Downloads")
+            .tint(color)
 
             Button {
                 app.showHistorySheet = true
@@ -19,6 +21,7 @@ struct StandardToolbar: ToolbarContent {
                 Image(systemName: "clock.arrow.circlepath")
             }
             .accessibilityLabel("History")
+            .tint(color)
 
             Button {
                 app.showQueueCover = true
@@ -26,6 +29,7 @@ struct StandardToolbar: ToolbarContent {
                 Image(systemName: "list.bullet")
             }
             .accessibilityLabel("Up Next")
+            .tint(color)
         }
     }
 }
@@ -34,6 +38,7 @@ struct StandardToolbar: ToolbarContent {
 /// ToolbarContent can't be expressed directly, e.g. inside an item group).
 struct StandardToolbarGroup: View {
     @Environment(AppModel.self) private var app
+    var color: Color = Theme.topBarButtonColor
 
     var body: some View {
         Button {
@@ -42,6 +47,7 @@ struct StandardToolbarGroup: View {
             Image(systemName: "arrow.down.circle")
         }
         .accessibilityLabel("Downloads")
+        .tint(color)
 
         Button {
             app.showHistorySheet = true
@@ -49,6 +55,7 @@ struct StandardToolbarGroup: View {
             Image(systemName: "clock.arrow.circlepath")
         }
         .accessibilityLabel("History")
+        .tint(color)
 
         Button {
             app.showQueueCover = true
@@ -56,6 +63,47 @@ struct StandardToolbarGroup: View {
             Image(systemName: "list.bullet")
         }
         .accessibilityLabel("Up Next")
+        .tint(color)
+    }
+}
+
+/// Confirmation alert for clearing watch history, shared by the Settings "Data"
+/// section and the History popup so both use the same routine.
+struct ClearHistoryConfirmation: ViewModifier {
+    @Binding var isPresented: Bool
+    let onClear: () -> Void
+
+    func body(content: Content) -> some View {
+        content.alert("Clear watch history?", isPresented: $isPresented) {
+            Button("Clear", role: .destructive) { onClear() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Your watch history will be emptied.")
+        }
+    }
+}
+
+/// A stream row that opens the video on tap and shows the "Add to playlist"
+/// dialog on long press.
+struct StreamCell: View {
+    @Environment(AppModel.self) private var app
+    let stream: StreamItem
+    @State private var showAddToPlaylist = false
+
+    var body: some View {
+        Button {
+            app.focusedVideo = stream
+        } label: {
+            StreamCard(stream: stream)
+        }
+        .buttonStyle(.plain)
+        .simultaneousGesture(LongPressGesture(minimumDuration: 0.4).onEnded { _ in
+            showAddToPlaylist = true
+        })
+        .sheet(isPresented: $showAddToPlaylist) {
+            AddToPlaylistSheet(stream: stream)
+        }
+        .accessibilityHint("Long press to add to a playlist")
     }
 }
 

@@ -51,6 +51,7 @@ List {
                     } label: {
                         Image(systemName: "plus")
                     }
+                    .tint(Theme.topBarButtonColor)
                 }
                 StandardToolbar()
             }
@@ -113,6 +114,7 @@ final class PlaylistDetailModel {
     var isWorking = false
     var pendingDeleteItem: LocalPlaylistItem?
     var removeItemDialogPresented = false
+    var isEditing = false
 
     let playlistID: String
 
@@ -246,7 +248,7 @@ struct PlaylistDetailScreen: View {
         }
         .navigationTitle("")
         .toolbar { playlistToolbar }
-        .navigationDestination(for: StreamItem.self) { VideoDetailView(stream: $0) }
+        .tint(Theme.topBarButtonColor)
         .alert("Rename Playlist", isPresented: $model.showRenameAlert) {
             TextField("Name", text: $model.newName)
             Button("Save") {
@@ -284,25 +286,20 @@ struct PlaylistDetailScreen: View {
             }
             Section {
                 ForEach(Array(playlist.streams.enumerated()), id: \.element.id) { index, item in
-                    HStack(spacing: 12) {
-                        Button {
+                    Button {
+                        app.focusedVideo = item.stream
+                        Task { await model.playItem(at: index, app: app) }
+                    } label: {
+                        streamRow(item.stream)
+                    }
+                    .buttonStyle(.plain)
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
                             model.pendingDeleteItem = item
                             model.removeItemDialogPresented = true
                         } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.title3)
-                                .foregroundStyle(.secondary)
+                            Label("Delete", systemImage: "trash")
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Remove \(item.stream.title)")
-
-                        Button {
-                            app.playlistsPath.append(item.stream)
-                            Task { await model.playItem(at: index, app: app) }
-                        } label: {
-                            streamRow(item.stream)
-                        }
-                        .buttonStyle(.plain)
                     }
                     .listRowInsets(EdgeInsets())
                 }
@@ -312,7 +309,7 @@ struct PlaylistDetailScreen: View {
             }
         }
         .listStyle(.plain)
-        .environment(\.editMode, .constant(.active))
+        .environment(\.editMode, .constant(model.isEditing ? .active : .inactive))
         .overlay(alignment: .center) {
             if model.isWorking {
                 ProgressView()
@@ -374,6 +371,11 @@ struct PlaylistDetailScreen: View {
 
     private var playlistToolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .topBarTrailing) {
+            Button(model.isEditing ? "Done" : "Edit") {
+                withAnimation { model.isEditing.toggle() }
+            }
+            .disabled(playlist?.streams.isEmpty ?? true)
+            .tint(Theme.topBarButtonColor)
             Menu {
                 Button {
                     Task { await model.playAll(app: app) }
@@ -421,6 +423,7 @@ struct PlaylistDetailScreen: View {
             } label: {
                 Image(systemName: "ellipsis")
             }
+            .tint(Theme.topBarButtonColor)
         }
     }
 }

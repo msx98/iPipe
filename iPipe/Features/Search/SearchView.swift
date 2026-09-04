@@ -79,7 +79,6 @@ struct SearchView: View {
                     Task { await model.runSearch(app: app) }
                 }
             }
-            .navigationDestination(for: StreamItem.self) { VideoDetailView(stream: $0) }
             .navigationDestination(for: ChannelItem.self) { ChannelView(channel: $0) }
         }
     }
@@ -126,12 +125,7 @@ struct SearchView: View {
                 switch results {
                 case .streams(let streams):
                     ForEach(streams) { stream in
-                        Button {
-                            app.focusedVideo = stream
-                        } label: {
-                            StreamCard(stream: stream)
-                        }
-                        .buttonStyle(.plain)
+                        StreamCell(stream: stream)
                     }
                 case .channels(let channels):
                     ForEach(channels) { channel in

@@ -36,6 +36,8 @@
 		C100000000000000000000D1 /* PlaylistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C100000000000000000000D2 /* PlaylistsView.swift */; };
 		C100000000000000000000E1 /* VideoPlayerOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C100000000000000000000E2 /* VideoPlayerOverlay.swift */; };
 		C100000000000000000000F1 /* QueueScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = C100000000000000000000F2 /* QueueScreen.swift */; };
+		C100000000000000000000A3 /* AddToPlaylistSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C100000000000000000000A4 /* AddToPlaylistSheet.swift */; };
+		C100000000000000000000F3 /* LicenseTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C100000000000000000000F4 /* LicenseTextView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -58,6 +60,8 @@
 		C100000000000000000000D2 /* PlaylistsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistsView.swift; sourceTree = "<group>"; };
 		C100000000000000000000E2 /* VideoPlayerOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerOverlay.swift; sourceTree = "<group>"; };
 		C100000000000000000000F2 /* QueueScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueScreen.swift; sourceTree = "<group>"; };
+		C100000000000000000000A4 /* AddToPlaylistSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddToPlaylistSheet.swift; sourceTree = "<group>"; };
+		C100000000000000000000F4 /* LicenseTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseTextView.swift; sourceTree = "<group>"; };
 		62933F08D94BFA3A1BDF272E /* TrendingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendingView.swift; sourceTree = "<group>"; };
 		473F5DC8C8B08701FACBC73E /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		E96BC027D3B2964198963BC1 /* SubscriptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionsView.swift; sourceTree = "<group>"; };
@@ -178,6 +182,7 @@
 			isa = PBXGroup;
 			children = (
 				1934B387ABE3C34F7B68F872 /* Components.swift */,
+				C100000000000000000000A4 /* AddToPlaylistSheet.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -244,6 +249,7 @@
 			children = (
 				66BECB6358075C6FB5CA7F48 /* SettingsView.swift */,
 				A53187C1601F81122828C159 /* YouTubeLoginView.swift */,
+				C100000000000000000000F4 /* LicenseTextView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -365,6 +371,9 @@
 			C100000000000000000000E1 /* VideoPlayerOverlay.swift in Sources */,
 			C100000000000000000000E1 /* VideoPlayerOverlay.swift in Sources */,
 			C100000000000000000000F1 /* QueueScreen.swift in Sources */,
+			C100000000000000000000F1 /* QueueScreen.swift in Sources */,
+			C100000000000000000000A3 /* AddToPlaylistSheet.swift in Sources */,
+			C100000000000000000000F3 /* LicenseTextView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

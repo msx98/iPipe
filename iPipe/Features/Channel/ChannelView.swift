@@ -48,7 +48,9 @@ struct ChannelView: View {
                             ProgressView()
                         } else {
                             ForEach(model.videos) { video in
-                                NavigationLink(value: video) {
+                                Button {
+                                    app.focusedVideo = video
+                                } label: {
                                     StreamCard(stream: video, showsChannel: false)
                                 }
                                 .buttonStyle(.plain)
@@ -63,11 +65,11 @@ struct ChannelView: View {
         .navigationTitle(model.channel?.name ?? channel.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { StandardToolbar() }
+        .tint(Theme.topBarButtonColor)
         .task {
             await model.load(app: app, channel: channel)
             Log.url(YouTubeURLs.channel(model.channel ?? channel))
         }
-        .navigationDestination(for: StreamItem.self) { VideoDetailView(stream: $0) }
     }
 
     private var header: some View {

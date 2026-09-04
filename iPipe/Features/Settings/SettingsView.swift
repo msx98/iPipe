@@ -8,6 +8,8 @@ struct SettingsView: View {
     @State private var showImporter = false
     @State private var shareURL: URL?
     @State private var importFailed = false
+    @State private var showLicense = false
+    @State private var showClearHistoryConfirm = false
 
     var body: some View {
         @Bindable var app = app
@@ -37,7 +39,7 @@ struct SettingsView: View {
                 }
                 Section("Data") {
                     Button("Clear watch history", role: .destructive) {
-                        app.clearHistory()
+                        showClearHistoryConfirm = true
                     }
                     .disabled(app.history.isEmpty)
                 }
@@ -68,10 +70,16 @@ struct SettingsView: View {
                     }
                 }
                 Section("About") {
-                    LabeledContent("App", value: "iPipe")
                     LabeledContent("Version", value: "0.1.0")
-                    LabeledContent("Extraction", value: "InnerTube (YouTube iOS client)")
-                    Link("NewPipe project", destination: URL(string: "https://newpipe.net")!)
+                    Button {
+                        showLicense = true
+                    } label: {
+                        HStack {
+                            Text("License")
+                            Spacer()
+                            Text("GPL v3").foregroundStyle(.secondary)
+                        }
+                    }
                 }
             }
             .navigationTitle("Settings")
@@ -100,11 +108,15 @@ struct SettingsView: View {
                     importCookies(from: url)
                 }
             }
+            .sheet(isPresented: $showLicense) {
+                LicenseTextView.gplv3
+            }
             .alert("Import failed", isPresented: $importFailed) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text("Could not parse the selected cookies file (Netscape .txt or JSON expected).")
             }
+            .modifier(ClearHistoryConfirmation(isPresented: $showClearHistoryConfirm, onClear: app.clearHistory))
         }
     }
 

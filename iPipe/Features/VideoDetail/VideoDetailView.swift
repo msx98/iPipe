@@ -42,8 +42,6 @@ struct VideoDetailView: View {
     @State private var model = VideoDetailModel()
     @State private var showDescription = false
     @State private var showAddToPlaylist = false
-    @State private var showNewPlaylistAlert = false
-    @State private var newPlaylistName = ""
 
     var body: some View {
         Group {
@@ -66,61 +64,10 @@ struct VideoDetailView: View {
             }
         }
         .sheet(isPresented: $showAddToPlaylist) {
-            NavigationStack {
-                List {
-                    if app.playlists.playlists.isEmpty {
-                        Text("No playlists yet")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(app.playlists.playlists) { playlist in
-                            Button {
-                                addToPlaylist(playlist)
-                                showAddToPlaylist = false
-                            } label: {
-                                HStack {
-                                    Label(playlist.name, systemImage: "list.bullet")
-                                        .font(.footnote)
-                                        .lineLimit(1)
-                                    Spacer()
-                                    if isAlreadyInPlaylist(playlist) {
-                                        Image(systemName: "checkmark")
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(Theme.accent)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Button {
-                        newPlaylistName = ""
-                        showNewPlaylistAlert = true
-                        showAddToPlaylist = false
-                    } label: {
-                        Label("New Playlist…", systemImage: "plus.rectangle.on.folder")
-                    }
-                }
-                .navigationTitle("Add to Playlist")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Done") {
-                            showAddToPlaylist = false
-                        }
-                    }
-                }
-            }
-            .presentationDetents([.medium])
-        }
-        .alert("New Playlist", isPresented: $showNewPlaylistAlert) {
-            TextField("Name", text: $newPlaylistName)
-            Button("Create") {
-                let target = model.stream ?? stream
-                app.playlists.create(newPlaylistName, streams: [target])
-                newPlaylistName = ""
-            }
-            Button("Cancel", role: .cancel) {}
+            AddToPlaylistSheet(stream: model.stream ?? stream)
         }
     }
+
 
     private var detailContent: some View {
         VStack(spacing: 0) {
@@ -133,7 +80,9 @@ struct VideoDetailView: View {
                         Text("Related").font(.headline)
                         LazyVStack(spacing: 14) {
                             ForEach(model.related) { related in
-                                NavigationLink(value: related) {
+                                Button {
+                                    app.focusedVideo = related
+                                } label: {
                                     HStack(spacing: 10) {
                                         AsyncThumbnail(url: related.thumbnailURL, videoId: related.id)
                                             .frame(width: 140)
@@ -303,21 +252,4 @@ struct VideoDetailView: View {
         }
     }
 
-    private func addToPlaylist(_ playlist: LocalPlaylist) {
-        let target = model.stream ?? stream
-        app.playlists.append([target], to: playlist)
-    }
-
-    private func isAlreadyInPlaylist(_ playlist: LocalPlaylist) -> Bool {
-        let target = model.stream ?? stream
-        return playlist.streams.contains(where: { $0.stream.id == target.id })
-    }
-}
-
-/// Re-exported queue view (full screen + sticky controls) for use in the
-/// video detail sheet; the shared full-screen version lives in QueueScreen.swift.
-struct QueueView: View {
-    var body: some View {
-        QueueScreen()
-    }
 }
