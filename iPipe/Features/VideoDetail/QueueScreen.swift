@@ -7,6 +7,11 @@ import SwiftUI
 struct QueueScreen: View {
     @Environment(AppModel.self) private var app
 
+    @State private var draggingIndex: Int?
+    @State private var dragTarget: Int?
+    @State private var dragTranslation: CGFloat = 0
+    private let rowHeight: CGFloat = 84
+
     var body: some View {
         VStack(spacing: 0) {
             queueList
@@ -48,6 +53,7 @@ struct QueueScreen: View {
         } else {
             List {
                 ForEach(Array(app.player.queue.enumerated()), id: \.element.stream.id) { index, item in
+                    let isDragging = index == draggingIndex
                     Button {
                         app.player.playFromQueue(at: index)
                     } label: {
@@ -79,13 +85,38 @@ struct QueueScreen: View {
                             Label("Dismiss", systemImage: "xmark.circle")
                         }
                     }
-                }
-                .onMove { offsets, destination in
-                    app.player.moveQueueItem(fromOffsets: offsets, toOffset: destination)
+                    .overlay(alignment: .trailing) {
+                        Image(systemName: "line.3.horizontal")
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 12)
+                            .contentShape(Rectangle())
+                            .highPriorityGesture(
+                                DragGesture(minimumDistance: 5)
+                                    .onChanged { value in
+                                        if draggingIndex == nil { draggingIndex = index }
+                                        dragTranslation = max(0, value.translation.height)
+                                        let moved = Int((value.translation.height / rowHeight).rounded())
+                                        dragTarget = min(max(0, index + moved), app.player.queue.count - 1)
+                                    }
+                                    .onEnded { _ in
+                                        if let from = draggingIndex, let to = dragTarget, to != from {
+                                            app.player.moveQueueItem(fromOffsets: IndexSet(integer: from), toOffset: to)
+                                        }
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                            draggingIndex = nil
+                                            dragTarget = nil
+                                            dragTranslation = 0
+                                        }
+                                    }
+                            )
+                    }
+                    .opacity(isDragging ? 0.4 : 1)
+                    .offset(y: isDragging ? dragTranslation : 0)
                 }
             }
             .listStyle(.plain)
-            .environment(\.editMode, .constant(.active))
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: draggingIndex)
         }
     }
 }

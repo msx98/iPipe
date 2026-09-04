@@ -36,12 +36,14 @@ struct VideoDetailView: View {
     @Environment(AppModel.self) private var app
     let stream: StreamItem
     var onSwipeDownToCollapse: () -> Void = {}
+    var onPlayerDragChanged: ((CGFloat) -> Void)?
+    var onPlayerDragEnded: ((DragGesture.Value) -> Void)?
+    var playerDragOffset: CGFloat = 0
     @State private var model = VideoDetailModel()
     @State private var showDescription = false
     @State private var showAddToPlaylist = false
     @State private var showNewPlaylistAlert = false
     @State private var newPlaylistName = ""
-    @State private var showQueue = false
 
     var body: some View {
         Group {
@@ -61,15 +63,6 @@ struct VideoDetailView: View {
             await model.load(app: app, stream: stream)
             if let watch = (model.stream ?? stream).watchURL {
                 Log.url(watch.absoluteString)
-            }
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    app.showQueueCover = true
-                } label: {
-                    Image(systemName: "list.bullet")
-                }
             }
         }
         .sheet(isPresented: $showAddToPlaylist) {
@@ -127,19 +120,6 @@ struct VideoDetailView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
-        .sheet(isPresented: $showQueue) {
-            NavigationStack {
-                QueueView()
-                    .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Done") {
-                                showQueue = false
-                            }
-                        }
-                    }
-            }
-            .presentationDetents([.medium, .large])
-        }
     }
 
     private var detailContent: some View {
@@ -193,12 +173,14 @@ struct VideoDetailView: View {
             .aspectRatio(16 / 9, contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .contentShape(Rectangle())
+            .offset(y: playerDragOffset)
             .gesture(
-                DragGesture(minimumDistance: 12)
+                DragGesture(minimumDistance: 6)
+                    .onChanged { value in
+                        onPlayerDragChanged?(max(0, value.translation.height))
+                    }
                     .onEnded { value in
-                        if value.translation.height > 120 || value.predictedEndTranslation.height > 90 {
-                            onSwipeDownToCollapse()
-                        }
+                        onPlayerDragEnded?(value)
                     }
             )
 

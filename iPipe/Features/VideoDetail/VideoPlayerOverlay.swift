@@ -4,6 +4,7 @@ struct VideoPlayerOverlay: View {
     @Environment(AppModel.self) private var app
     let stream: StreamItem
     @State private var expanded = true
+    @State private var dragOffset: CGFloat = 0
 
     var body: some View {
         GeometryReader { geo in
@@ -16,21 +17,32 @@ struct VideoPlayerOverlay: View {
 
                 if expanded {
                     NavigationStack {
-                        VideoDetailView(stream: stream)
-                            .navigationDestination(for: StreamItem.self) { related in
-                                VideoDetailView(stream: related)
-                            }
-                            .navigationDestination(for: ChannelItem.self) { ChannelView(channel: $0) }
-                            .toolbar {
-                                ToolbarItemGroup(placement: .topBarLeading) {
-                                    Button { close() } label: {
-                                        Image(systemName: "xmark")
-                                    }
-                                    Button { collapse() } label: {
-                                        Image(systemName: "chevron.down")
-                                    }
+                        VideoDetailView(
+                            stream: stream,
+                            onPlayerDragChanged: { dragOffset = max(0, $0) },
+                            onPlayerDragEnded: endDrag,
+                            playerDragOffset: dragOffset
+                        )
+                        .navigationDestination(for: StreamItem.self) { related in
+                            VideoDetailView(
+                                stream: related,
+                                onPlayerDragChanged: { dragOffset = max(0, $0) },
+                                onPlayerDragEnded: endDrag,
+                                playerDragOffset: dragOffset
+                            )
+                        }
+                        .navigationDestination(for: ChannelItem.self) { ChannelView(channel: $0) }
+                        .toolbar {
+                            ToolbarItemGroup(placement: .topBarLeading) {
+                                Button { close() } label: {
+                                    Image(systemName: "xmark")
+                                }
+                                Button { collapse() } label: {
+                                    Image(systemName: "chevron.down")
                                 }
                             }
+                            StandardToolbar()
+                        }
                     }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 } else {
@@ -45,14 +57,28 @@ struct VideoPlayerOverlay: View {
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: expanded)
     }
 
+    /// Dragging the video preview slides just the video downward with the finger
+    /// (the top bar stays put); on release it collapses or springs back.
+    private func endDrag(_ value: DragGesture.Value) {
+        if value.translation.height > 140 || value.predictedEndTranslation.height > 120 {
+            collapse()
+        } else {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                dragOffset = 0
+            }
+        }
+    }
+
     private func collapse() {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            dragOffset = 0
             expanded = false
         }
     }
 
     private func expand() {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            dragOffset = 0
             expanded = true
         }
     }
