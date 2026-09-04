@@ -180,6 +180,21 @@ struct VideoDetailView: View {
         }
     }
 
+    /// Static stand-in for the active video while background output is on: the
+    /// video thumbnail dimmed so the controls read, or a large gray headphones
+    /// icon when no thumbnail exists. No live video layer is shown.
+    @ViewBuilder
+    private var backgroundPlaceholder: some View {
+        if let url = (model.stream ?? stream).thumbnailURL ?? app.player.currentStream?.thumbnailURL {
+            AsyncThumbnail(url: url, videoId: app.player.currentStream?.id ?? stream.id)
+                .overlay(Color.black.opacity(0.4))
+        } else {
+            Image(systemName: "headphones")
+                .font(.system(size: 64))
+                .foregroundStyle(.gray)
+        }
+    }
+
     private func toggleControls() {
         withAnimation(.easeInOut(duration: 0.2)) {
             showControls.toggle()
