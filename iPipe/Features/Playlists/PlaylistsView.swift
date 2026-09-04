@@ -161,30 +161,33 @@ struct PlaylistsView: View {
     var body: some View {
         @Bindable var app = app
         NavigationStack(path: $app.playlistsPath) {
-            Group {
-                if app.playlists.playlists.isEmpty {
-                    ContentUnavailableView(
-                        "No playlists yet",
-                        systemImage: "list.bullet",
-                        description: Text("Add videos from any video page.")
-                    )
-                } else {
-                    List {
-                        ForEach(Array(app.playlists.playlists.enumerated()), id: \.element.id) { index, playlist in
-                            playlistCell(playlist)
-                                .padding(.trailing, 10)
-                                .overlay(alignment: .bottom) {
-                                    if index < app.playlists.playlists.count - 1 { rowSeparator }
-                                }
-                                .listRowSeparator(.hidden)
-                                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+            VStack(alignment: .leading, spacing: 0) {
+                header
+                Group {
+                    if app.playlists.playlists.isEmpty {
+                        ContentUnavailableView(
+                            "No playlists yet",
+                            systemImage: "list.bullet",
+                            description: Text("Add videos from any video page.")
+                        )
+                    } else {
+                        List {
+                            ForEach(Array(app.playlists.playlists.enumerated()), id: \.element.id) { index, playlist in
+                                playlistCell(playlist)
+                                    .padding(.trailing, 10)
+                                    .overlay(alignment: .bottom) {
+                                        if index < app.playlists.playlists.count - 1 { rowSeparator }
+                                    }
+                                    .listRowSeparator(.hidden)
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                            }
+                            .onMove { offsets, destination in
+                                app.playlists.move(from: offsets, to: destination)
+                            }
                         }
-                        .onMove { offsets, destination in
-                            app.playlists.move(from: offsets, to: destination)
-                        }
+                        .listStyle(.plain)
+                        .environment(\.editMode, .constant(model.isEditing ? .active : .inactive))
                     }
-                    .listStyle(.plain)
-                    .environment(\.editMode, .constant(model.isEditing ? .active : .inactive))
                 }
             }
             .toolbar {
@@ -196,22 +199,9 @@ struct PlaylistsView: View {
                     }
                     .tint(Theme.topBarButtonColor)
                 }
-                ToolbarItem(placement: .principal) {
-                    HStack(spacing: 12) {
-                        Text("Playlists")
-                            .font(.headline)
-                        Button {
-                            withAnimation { model.isEditing.toggle() }
-                        } label: {
-                            Image(systemName: model.isEditing ? "checkmark.circle" : "pencil")
-                                .font(.title3)
-                        }
-                        .buttonStyle(.plain)
-                        .tint(Theme.topBarButtonColor)
-                    }
-                }
                 StandardToolbar()
             }
+            .navigationTitle("")
             .alert("New Playlist", isPresented: $model.showCreateAlert) {
                 TextField("Name", text: $model.newPlaylistName)
                 Button("Create") {
@@ -244,6 +234,26 @@ struct PlaylistsView: View {
                 PlaylistDetailScreen(playlistID: playlistID)
             }
         }
+    }
+
+    /// In-content title header shown beneath the top bar: "Playlists" on the left
+    /// and an edit-toggle pencil on the right, mirroring the Subscriptions tab.
+    private var header: some View {
+        HStack(alignment: .center) {
+            Text("Playlists")
+                .font(.title2.weight(.bold))
+            Spacer()
+            Button {
+                withAnimation { model.isEditing.toggle() }
+            } label: {
+                Image(systemName: model.isEditing ? "checkmark.circle" : "pencil")
+                    .font(.title3)
+            }
+            .buttonStyle(.plain)
+            .tint(Theme.topBarButtonColor)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 
     @ViewBuilder
