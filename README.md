@@ -20,6 +20,7 @@ Note that sign-ins will only work if you set a keychain access group: $TEAMID.ax
 ## Features
 
 - Full **video detail/player** screen — metadata, description, related videos, and a quality picker
+- **Local playlists** — create, append, reorder, dedupe, remove watched, and play as a sequential queue; share/export as URLs or a YouTube temporary playlist
 - **Downloads** — video (≤1080p) and audio (itag 140), with per-part progress, saved under `Documents/Downloads/`
 - Picture-in-style background audio playback (synthetic HLS manifests via [`HLSResourceLoader`/`HLSBuilder`](iPipe/Core/Player/PlayerModel.swift))
 - Account flows: in-app **Youtube login** (`WKWebView`), cookie import/export, signed request signing
