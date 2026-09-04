@@ -211,7 +211,7 @@ struct VideoDetailView: View {
         controlsTask = Task {
             try? await Task.sleep(nanoseconds: 4_000_000_000)
             guard !Task.isCancelled else { return }
-            if app.player.isPlaying {
+            if app.player.playState {
                 withAnimation(.easeOut(duration: 0.25)) { showControls = false }
             }
         }
@@ -575,7 +575,7 @@ struct FullscreenPlayerView: View {
         controlsTask = Task {
             try? await Task.sleep(nanoseconds: 4_000_000_000)
             guard !Task.isCancelled else { return }
-            if app.player.isPlaying {
+            if app.player.playState {
                 withAnimation(.easeOut(duration: 0.25)) { showControls = false }
             }
         }
