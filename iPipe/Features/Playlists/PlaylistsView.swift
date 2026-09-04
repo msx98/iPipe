@@ -348,8 +348,8 @@ final class PlaylistDetailModel {
 }
 
 /// Detail screen for a single local playlist: header with an edit toggle, a Play
-/// button, an ordered, reorderable list of its videos (leading reorder handle and
-/// a trailing "×"/chevron), and a menu of playlist actions.
+/// button, an ordered, reorderable list of its videos (reorder handle plus a
+/// trailing "×"/chevron), and a menu of playlist actions.
 struct PlaylistDetailScreen: View {
     @Environment(AppModel.self) private var app
     let playlistID: String
