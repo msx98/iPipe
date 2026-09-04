@@ -10,7 +10,6 @@ final class VideoDetailModel {
     var formats: [VideoFormat] = []
     var isLoading = true
     var error: String?
-    var backgroundMode = false
 
     func load(app: AppModel, stream: StreamItem) async {
         isLoading = true
@@ -257,7 +256,7 @@ struct VideoDetailView: View {
                             .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
                     }
                     Button {
-                        withAnimation { model.backgroundMode.toggle() }
+                        withAnimation { app.player.setBackgroundMode(!app.player.backgroundMode) }
                     } label: {
                         Label("Background", systemImage: "headphones")
                             .font(.footnote.weight(.medium))
@@ -354,6 +353,9 @@ struct PlayerControlsOverlay: View {
                 endPoint: .bottom
             )
             VStack(spacing: 0) {
+                if app.player.backgroundMode {
+                    headphoneIndicator
+                }
                 Spacer()
                 centerButtons
                 Spacer()
@@ -417,6 +419,21 @@ struct PlayerControlsOverlay: View {
         scrubTime ?? min(app.player.currentTime, app.player.currentDuration)
     }
 
+    /// Inert gray headphone badge shown at the top-right while background mode is
+    /// active; purely visual, no action.
+    private var headphoneIndicator: some View {
+        HStack {
+            Spacer()
+            Image(systemName: "headphones")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(.gray)
+                .shadow(color: .black.opacity(0.5), radius: 3)
+                .accessibilityLabel("Background mode active")
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 16)
+    }
+
     private var bottomBar: some View {
         HStack(spacing: 10) {
             Text(displayCurrentTime.durationText)
@@ -443,16 +460,29 @@ struct PlayerControlsOverlay: View {
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.white)
                 .frame(minWidth: 44, alignment: .leading)
-            Button {
-                onFullscreen()
-            } label: {
-                Image(systemName: isFullscreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.5), radius: 3)
+            if app.player.backgroundMode {
+                Button {
+                    withAnimation { app.player.setBackgroundMode(false) }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.5), radius: 3)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Exit background mode")
+            } else {
+                Button {
+                    onFullscreen()
+                } label: {
+                    Image(systemName: isFullscreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.5), radius: 3)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isFullscreen ? "Exit fullscreen" : "Fullscreen")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(isFullscreen ? "Exit fullscreen" : "Fullscreen")
         }
         .padding(.horizontal, 24)
         .padding(.bottom, 20)

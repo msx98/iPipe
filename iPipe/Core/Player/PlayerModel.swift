@@ -23,6 +23,25 @@ final class PlayerModel {
     private let pipController: AVPictureInPictureController?
     private let pipDelegate = PlayerPiPDelegate()
     var isPiPActive = false
+    /// When true, the player enters "background" mode: audio continues while the
+    /// app is backgrounded and the overlay swaps fullscreen for an "x" that exits
+    /// the mode. Off by default (backgrounding alone must not keep playing).
+    var backgroundMode = false
+
+    /// Toggles background playback. Enabling keeps the shared `AVAudioSession` in
+    /// the `.playback` category (required for audio to continue in the background,
+    /// alongside `UIBackgroundModes` = `audio`); disabling deactivates it so
+    /// backgrounding pauses again.
+    func setBackgroundMode(_ enabled: Bool) {
+        backgroundMode = enabled
+        let session = AVAudioSession.sharedInstance()
+        if enabled {
+            try? session.setCategory(.playback, mode: .moviePlayback)
+            try? session.setActive(true)
+        } else {
+            try? session.setActive(false, options: .notifyOthersOnDeactivation)
+        }
+    }
 
     init() {
         pipController = AVPictureInPictureController(playerLayer: playerLayerView.playerLayer)
