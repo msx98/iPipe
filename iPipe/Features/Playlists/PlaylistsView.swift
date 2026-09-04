@@ -11,6 +11,9 @@ final class PlaylistsListModel {
     var isEditing = false
     var pendingDeletePlaylist: LocalPlaylist?
     var deleteConfirmPresented = false
+    var showRenameAlert = false
+    var newName = ""
+    var renameTarget: LocalPlaylist?
 
     /// Creates an empty playlist via the manager (empty name is rejected, but an
     /// empty stream list is allowed), then clears the prompt state.
@@ -18,6 +21,23 @@ final class PlaylistsListModel {
         app.playlists.create(newPlaylistName, streams: [])
         newPlaylistName = ""
         showCreateAlert = false
+    }
+
+    /// Starts the rename prompt, pre-filled with the playlist's current name.
+    func beginRename(_ playlist: LocalPlaylist) {
+        renameTarget = playlist
+        newName = playlist.name
+        showRenameAlert = true
+    }
+
+    /// Applies the confirmed rename to the target playlist via the manager.
+    func commitRename(app: AppModel) {
+        guard let target = renameTarget else { return }
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        app.playlists.rename(target, to: trimmed)
+        renameTarget = nil
+        showRenameAlert = false
     }
 
     /// Performs the confirmed deletion of the playlist read from the list.
@@ -53,11 +73,10 @@ struct PlaylistRowAccessory: View {
 }
 
 /// Shared playlists row used by both the playlists home list and a playlist's
-/// detail list. It standardizes the edit-mode affordances (a leading reorder
-/// handle via a 180° flip of the native control, and a trailing "×"/chevron
-/// accessory) so both screens behave identically. `onTap` is applied only to the
-/// leading thumbnail/title so the trailing accessory stays independently
-/// tappable; pass `nil` while editing.
+/// detail list. It standardizes the edit-mode affordances (the native reorder
+/// handle and a trailing "×"/chevron accessory) so both screens behave
+/// identically. `onTap` is applied only to the leading thumbnail/title so the
+/// trailing accessory stays independently tappable; pass `nil` while editing.
 struct PlaylistRowCell: View {
     let thumbnailURL: URL?
     let videoId: String
@@ -65,10 +84,10 @@ struct PlaylistRowCell: View {
     let title: String
     let subtitle: String
     let isEditing: Bool
-    var titleBinding: Binding<String>? = nil
     var titleFont: Font = .subheadline.weight(.semibold)
     var subtitleFont: Font = .caption
     var onTap: (() -> Void)?
+    var onRename: (() -> Void)?
     let onDelete: () -> Void
 
     var body: some View {
@@ -110,9 +129,14 @@ struct PlaylistRowCell: View {
 
     @ViewBuilder
     private var titleView: some View {
-        if isEditing, let titleBinding {
-            TextField("Name", text: titleBinding)
-                .font(titleFont)
+        if isEditing, let onRename {
+            Button(action: onRename) {
+                Text(title)
+                    .font(titleFont)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .buttonStyle(.plain)
         } else {
             Text(title)
                 .font(titleFont)
@@ -123,8 +147,8 @@ struct PlaylistRowCell: View {
 }
 
 /// Top-level playlists screen: list of local playlists with an empty state,
-/// swipe-to-delete, an edit mode (left reorder handle, "×" per row, rename the
-/// name inline), and a "New" action that prompts for a name.
+/// swipe-to-delete, an edit mode (reorder handle, "×" per row, tappable-to-rename
+/// name), and a "New" action that prompts for a name.
 struct PlaylistsView: View {
     @Environment(AppModel.self) private var app
     @State private var model = PlaylistsListModel()
@@ -190,6 +214,15 @@ struct PlaylistsView: View {
             } message: {
                 Text("This playlist will be deleted.")
             }
+            .alert("Rename Playlist", isPresented: $model.showRenameAlert) {
+                TextField("Name", text: $model.newName)
+                Button("Save") {
+                    model.commitRename(app: app)
+                }
+                Button("Cancel", role: .cancel) {
+                    model.showRenameAlert = false
+                }
+            }
             .navigationDestination(for: String.self) { playlistID in
                 PlaylistDetailScreen(playlistID: playlistID)
             }
@@ -205,13 +238,8 @@ struct PlaylistsView: View {
             title: playlist.name,
             subtitle: "\(playlist.streamCount) items · \(playlist.totalDuration.durationText)",
             isEditing: model.isEditing,
-            titleBinding: Binding(
-                get: { playlist.name },
-                set: { newValue in
-                    if !newValue.isEmpty { app.playlists.rename(playlist, to: newValue) }
-                }
-            ),
             onTap: model.isEditing ? nil : { app.playlistsPath.append(playlist.id) },
+            onRename: model.isEditing ? { model.beginRename(playlist) } : nil,
             onDelete: {
                 model.pendingDeletePlaylist = playlist
                 model.deleteConfirmPresented = true
@@ -306,7 +334,7 @@ final class PlaylistDetailModel {
     /// Fills the latent queue with the whole playlist and starts it at the
     /// tapped item, so backgrounding the playlist leaves it as “up next”.
     func playItem(at index: Int, app: AppModel) async {
-        guard let playlist = refreshPlaylist(app: app) else { return }
+        guard refreshPlaylist(app: app) != nil else { return }
         let queue = await buildQueue(app: app)
         guard index < queue.count else { return }
         app.player.playQueue(queue, startAt: index)
