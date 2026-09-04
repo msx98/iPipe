@@ -420,6 +420,8 @@ struct PlaylistDetailScreen: View {
             Section {
                 headerRow(playlist)
                     .listRowInsets(EdgeInsets())
+                playAllButton
+                    .listRowInsets(EdgeInsets())
             }
             Section {
                 ForEach(Array(playlist.streams.enumerated()), id: \.element.id) { index, item in
@@ -488,6 +490,22 @@ struct PlaylistDetailScreen: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
+    }
+
+    private var playAllButton: some View {
+        Button {
+            Task { await model.playAll(app: app) }
+        } label: {
+            Label("Play", systemImage: "play.circle.fill")
+                .font(.footnote.weight(.medium))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .disabled(model.isEditing || (playlist?.streams.isEmpty ?? true))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
     }
 
 }
