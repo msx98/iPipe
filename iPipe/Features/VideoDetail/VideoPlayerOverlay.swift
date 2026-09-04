@@ -34,12 +34,14 @@ struct VideoPlayerOverlay: View {
                         .navigationDestination(for: ChannelItem.self) { ChannelView(channel: $0) }
                         .toolbar {
                             ToolbarItemGroup(placement: .topBarLeading) {
+                                Button { navigateBack() } label: {
+                                    Image(systemName: "chevron.left")
+                                }
+                                .accessibilityLabel("Back")
                                 Button { close() } label: {
                                     Image(systemName: "xmark")
                                 }
-                                Button { collapse() } label: {
-                                    Image(systemName: "chevron.down")
-                                }
+                                .accessibilityLabel("Close and clear queue")
                             }
                             StandardToolbar()
                         }
@@ -76,6 +78,11 @@ struct VideoPlayerOverlay: View {
         }
     }
 
+    /// `<` collapses to the mini player (soft back).
+    private func navigateBack() {
+        collapse()
+    }
+
     private func expand() {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
             dragOffset = 0
@@ -86,7 +93,7 @@ struct VideoPlayerOverlay: View {
     private func close() {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
             app.focusedVideo = nil
-            app.player.stop()
+            app.player.clearQueue()
         }
     }
 }
