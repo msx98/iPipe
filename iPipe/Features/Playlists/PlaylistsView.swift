@@ -513,15 +513,6 @@ struct PlaylistDetailScreen: View {
     @ViewBuilder
     private func headerRow(_ playlist: LocalPlaylist) -> some View {
         HStack(spacing: 10) {
-            Button {
-                withAnimation { model.isEditing.toggle() }
-            } label: {
-                Image(systemName: model.isEditing ? "checkmark.circle" : "pencil")
-                    .font(.title3)
-                    .foregroundStyle(.tint)
-            }
-            .buttonStyle(.bordered)
-            .clipShape(Circle())
             VStack(alignment: .leading, spacing: 2) {
                 Text(playlist.name)
                     .font(.title3.weight(.bold))
@@ -532,6 +523,17 @@ struct PlaylistDetailScreen: View {
                     .foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
+            Button {
+                withAnimation { model.isEditing.toggle() }
+            } label: {
+                Image(systemName: model.isEditing ? "checkmark.circle" : "pencil")
+                    .font(.title3)
+                    .foregroundStyle(model.isEditing ? Theme.accent : Theme.topBarButtonColor)
+            }
+            .buttonStyle(.plain)
+            .frame(maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .padding(.leading, 12)
         }
         .padding(.vertical, 10)
     }
