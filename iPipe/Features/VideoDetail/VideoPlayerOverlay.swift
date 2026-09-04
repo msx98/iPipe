@@ -16,7 +16,7 @@ struct VideoPlayerOverlay: View {
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                Color.black
+                Color.black.opacity(0.25)
                     .ignoresSafeArea(.container)
 
                 NavigationStack {
