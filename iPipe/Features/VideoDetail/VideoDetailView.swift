@@ -507,7 +507,10 @@ struct PlayerControlsOverlay: View {
                 .frame(minWidth: 44, alignment: .leading)
             if isBackgroundMode {
                 Button {
-                    withAnimation { app.player.toggleBackground() }
+                    // Always return to in-app playback: `toggleBackground()`
+                    // would toggle, so after an auto-background demotes back to
+                    // `.normal` on foreground, a tap would flip to `.background`.
+                    withAnimation { app.player.setVideoOutput(.normal) }
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 17, weight: .semibold))
