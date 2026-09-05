@@ -31,6 +31,11 @@ final class PlayerModel {
     var videoOutput: VideoOutput = .normal
     /// Whether the app is currently foregrounded (scene phase `.active`).
     var appForegrounded = true
+    /// The active video's full state as a tuple: play intent, video output
+    /// destination, and whether the app is foregrounded.
+    var activeVideoState: (playWhenForegrounded: Bool, videoOutput: VideoOutput, appForegrounded: Bool) {
+        (playWhenForegrounded, videoOutput, appForegrounded)
+    }
     /// True when the app auto-promoted a normal-output video to `.background`
     /// purely because it was backgrounded (not an explicit user "Background"
     /// toggle), so it can be demoted back to `.normal` on return to foreground.
@@ -40,7 +45,8 @@ final class PlayerModel {
     /// true and pauses otherwise. Playback keeps running while backgrounded or in
     /// PiP even if `appForegrounded` is false.
     var playState: Bool {
-        playWhenForegrounded && (appForegrounded || videoOutput == .background || videoOutput == .pip)
+        let (playWhenForegrounded, videoOutput, appForegrounded) = activeVideoState
+        return playWhenForegrounded && (appForegrounded || videoOutput == .background || videoOutput == .pip)
     }
 
     /// UIKit host for the inline video surface. Rendering through an `AVPlayerLayer`
