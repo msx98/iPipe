@@ -188,10 +188,13 @@ struct VideoDetailView: View {
         if let url = (model.stream ?? stream).thumbnailURL ?? app.player.currentStream?.thumbnailURL {
             AsyncThumbnail(url: url, videoId: app.player.currentStream?.id ?? stream.id)
                 .overlay(Color.black.opacity(0.4))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
         } else {
             Image(systemName: "headphones")
                 .font(.system(size: 64))
                 .foregroundStyle(.gray)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
