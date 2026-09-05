@@ -389,13 +389,19 @@ struct PlayerControlsOverlay: View {
                 endPoint: .bottom
             )
             VStack(spacing: 0) {
-                if isBackgroundMode {
-                    headphoneIndicator
-                }
                 Spacer()
                 centerButtons
                 Spacer()
                 bottomBar
+            }
+            // Overlay the background-mode badge on top of the video rather than
+            // laying it out in the controls VStack, which would shift the centered
+            // play/pause and the bottom bar downward.
+            if isBackgroundMode {
+                VStack {
+                    headphoneIndicator
+                    Spacer()
+                }
             }
         }
     }
