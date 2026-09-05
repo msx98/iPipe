@@ -51,15 +51,14 @@ final class PlayerModel {
     /// Toggles between `.normal` (in-app) and `.background` (audio keeps playing
     /// while the app is backgrounded). Entering a background output keeps the
     /// shared `AVAudioSession` active (`.playback` category, alongside
-    /// `UIBackgroundModes` = `audio`) so audio continues in the background; leaving
-    /// every background output deactivates it so app backgrounding pauses again.
+    /// `UIBackgroundModes` = `audio`) so audio continues in the background; the
+    /// session is only deactivated when playback actually stops, never on a mere
+    /// output-mode switch (which would pause an actively playing video).
     func toggleBackground() {
         if videoOutput == .background {
             videoOutput = .normal
-            deactivateBackgroundAudio()
         } else {
             videoOutput = .background
-            activateBackgroundAudio()
         }
         if videoOutput != .pip {
             dismissPiPIfNeeded()
@@ -69,14 +68,10 @@ final class PlayerModel {
 
     /// Sets the video output directly — used by system picture-in-picture: `.pip`
     /// when PiP starts, `.normal` when it stops. PiP keeps the audio session active
-    /// so playback continues offscreen.
+    /// so playback continues offscreen. The audio session is only deactivated when
+    /// playback actually stops, never on a mere output-mode switch.
     func setVideoOutput(_ output: VideoOutput) {
         videoOutput = output
-        if videoOutput == .pip || videoOutput == .background {
-            activateBackgroundAudio()
-        } else {
-            deactivateBackgroundAudio()
-        }
         if videoOutput != .pip {
             dismissPiPIfNeeded()
         }
@@ -101,6 +96,7 @@ final class PlayerModel {
             return
         }
         if playState {
+            activateBackgroundAudio()
             if player.timeControlStatus != .playing {
                 player.play()
             }
@@ -404,6 +400,15 @@ final class PlayerModel {
         syncPlayState()
     }
 
+    /// Sets the user's play/pause intent directly (used by the Now Playing /
+    /// Control Center remote commands, which are directional, not toggles).
+    /// "Play" sets the intent to playing; "Pause" sets it to paused.
+    func setPlayIntent(_ playing: Bool) {
+        guard player != nil else { return }
+        playWhenForegrounded = playing
+        syncPlayState()
+    }
+
     func stop() {
         removeEndObserver()
         stopTimeObserver()
@@ -521,13 +526,13 @@ final class PlayerModel {
         let center = MPRemoteCommandCenter.shared()
         center.playCommand.addTarget { [weak self] _ in
             MainActor.assumeIsolated {
-                self?.togglePlayPause()
+                self?.setPlayIntent(true)
             }
             return .success
         }
         center.pauseCommand.addTarget { [weak self] _ in
             MainActor.assumeIsolated {
-                self?.togglePlayPause()
+                self?.setPlayIntent(false)
             }
             return .success
         }
