@@ -31,6 +31,10 @@ final class PlayerModel {
     var videoOutput: VideoOutput = .normal
     /// Whether the app is currently foregrounded (scene phase `.active`).
     var appForegrounded = true
+    /// True when the app auto-promoted a normal-output video to `.background`
+    /// purely because it was backgrounded (not an explicit user "Background"
+    /// toggle), so it can be demoted back to `.normal` on return to foreground.
+    private var wasAutoBackgrounded = false
 
     /// The effective play/pause state: the `AVPlayer` plays exactly when this is
     /// true and pauses otherwise. Playback keeps running while backgrounded or in
@@ -81,8 +85,25 @@ final class PlayerModel {
     /// Scene lifecycle. `true` when the app is active (foreground), `false` when
     /// backgrounded. Pausing/restoring is delegated to `syncPlayState()`, which
     /// keeps playing while a background or PiP output is active.
+    ///
+    /// When the app backgrounds with an active video that the user intends to
+    /// keep playing, we automatically promote the output to `.background` so it
+    /// continues as a backgrounded song (per `playState`) instead of pausing; on
+    /// return to the foreground we demote it back to `.normal`.
     func updateAppForegrounded(_ isActive: Bool) {
-        appForegrounded = isActive
+        if isActive {
+            if wasAutoBackgrounded, videoOutput == .background {
+                wasAutoBackgrounded = false
+                videoOutput = .normal
+            }
+            appForegrounded = true
+        } else {
+            appForegrounded = false
+            if hasItem, playWhenForegrounded, videoOutput == .normal {
+                wasAutoBackgrounded = true
+                videoOutput = .background
+            }
+        }
         syncPlayState()
     }
 
@@ -419,6 +440,7 @@ final class PlayerModel {
         currentStream = nil
         playWhenForegrounded = false
         videoOutput = .normal
+        wasAutoBackgrounded = false
         deactivateBackgroundAudio()
         dismissPiPIfNeeded()
         isPlaying = false
