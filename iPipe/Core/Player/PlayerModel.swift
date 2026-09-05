@@ -33,8 +33,15 @@ final class PlayerModel {
     var appForegrounded = true
     /// The active video's full state as a tuple: play intent, video output
     /// destination, and whether the app is foregrounded.
+    ///
+    /// `videoOutput` is only ever `.pip` while PiP is actually running (see
+    /// `startPiP` / the PiP delegate), so a video that is merely backgrounded
+    /// with the video still expanded never resolves to `.pip` — it behaves
+    /// exactly like the collapse-then-exit flow: a backgrounded song, per
+    /// `playState`, with no PiP window.
     var activeVideoState: (playWhenForegrounded: Bool, videoOutput: VideoOutput, appForegrounded: Bool) {
-        (playWhenForegrounded, videoOutput, appForegrounded)
+        let output: VideoOutput = (videoOutput == .pip && isPiPActive) ? .pip : videoOutput
+        return (playWhenForegrounded, output, appForegrounded)
     }
     /// True when the app auto-promoted a normal-output video to `.background`
     /// purely because it was backgrounded (not an explicit user "Background"
@@ -95,9 +102,18 @@ final class PlayerModel {
     /// When the app backgrounds with an active video that the user intends to
     /// keep playing, we automatically promote the output to `.background` so it
     /// continues as a backgrounded song (per `playState`) instead of pausing; on
-    /// return to the foreground we demote it back to `.normal`.
+    /// return to the foreground we demote it back to `.normal`. If the video is
+    /// still expanded when the app backgrounds (`videoOutput == .background`),
+    /// that path applies unchanged: the video collapses into the backgrounded
+    /// song, and no PiP window is ever started (`canStartPictureInPicture
+    /// AutomaticallyFromInline` stays `false`, and `videoOutput` never becomes
+    /// `.pip` here), so exiting the app mid-video behaves exactly like
+    /// collapsing to the miniplayer first and then exiting.
     func updateAppForegrounded(_ isActive: Bool) {
         if isActive {
+            // Mirror of the background branch below: a video that was collapsed
+            // into the backgrounded song on exit returns to in-app playback on
+            // re-entry.
             if wasAutoBackgrounded, videoOutput == .background {
                 wasAutoBackgrounded = false
                 videoOutput = .normal
