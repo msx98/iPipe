@@ -86,7 +86,8 @@ struct SettingsView: View {
                     }
                 }
                 Section("About") {
-                    LabeledContent("Version", value: "0.1.0")
+                    LabeledContent("Version", value: app.marketingVersion)
+                    LabeledContent("Commit", value: app.commitHash ?? "unknown")
                     Button {
                         showLicense = true
                     } label: {

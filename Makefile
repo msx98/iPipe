@@ -151,6 +151,8 @@ build: icon
 		echo "xcodebuild OK ($(BUILDDIR)/xcodebuild.log)"; \
 		rm -rf "$(APP_PATH)"; \
 		cp -R "$(DERIVED)/Build/Products/$(PRODUCT_SUBDIR)/$(APP_NAME).app" "$(APP_PATH)"; \
+		plutil -replace IPipeCommitHash -string "$$head_hash" "$(APP_PATH)/Info.plist" 2>/dev/null \
+		  || plutil -insert IPipeCommitHash -string "$$head_hash" "$(APP_PATH)/Info.plist"; \
 		echo "$$head_hash" > "$(APPROOT)/.app_commit_hash"; \
 		echo "$(BUNDLE_ID)" > "$(APPROOT)/.bundle_id"; \
 		git add .; \
