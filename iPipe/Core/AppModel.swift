@@ -64,6 +64,7 @@ final class AppModel {
         let defaults = UserDefaults.standard
         backend = Backend(rawValue: defaults.string(forKey: Self.backendKey) ?? "") ?? .youtube
         colorSchemeChoice = defaults.string(forKey: Self.schemeKey) ?? "system"
+        videoExitBehavior = VideoExitBehavior(rawValue: defaults.string(forKey: Self.videoExitBehaviorKey) ?? "") ?? .background
         tabOrder = Self.loadTabOrder(defaults)
         hiddenTabs = Self.loadHiddenTabs(defaults)
         if let data = defaults.data(forKey: Self.subscriptionsKey),

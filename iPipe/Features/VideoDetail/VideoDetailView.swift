@@ -188,6 +188,7 @@ struct VideoDetailView: View {
                     }
                     .font(.footnote.weight(.medium))
                     .padding(.vertical, 6)
+                    .padding(.horizontal, 6)
                     //.frame(maxHeight: .infinity)
                 }
                 Spacer()
