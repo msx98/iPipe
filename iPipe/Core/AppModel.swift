@@ -51,11 +51,13 @@ final class AppModel {
     private(set) var tabOrder: [RootTab]
     private(set) var hiddenTabs: Set<RootTab>
 
-    /// Commit hash the running binary was built from (injected by the Makefile
-    /// into Info.plist as `IPipeCommitHash`). Nil when running from a build that
-    /// pre-dates the stamp — useful for showing "unknown" rather than blank.
+    /// Short commit hash the running binary was built from (injected by the
+    /// Makefile into Info.plist as `IPipeCommitHash`), truncated for display.
+    /// Nil when running from a build that pre-dates the stamp.
     var commitHash: String? {
-        Bundle.main.object(forInfoDictionaryKey: "IPipeCommitHash") as? String
+        guard let full = Bundle.main.object(forInfoDictionaryKey: "IPipeCommitHash") as? String,
+              !full.isEmpty else { return nil }
+        return String(full.prefix(7))
     }
 
     /// Human-readable version from Info.plist's `CFBundleShortVersionString`,
