@@ -68,7 +68,7 @@ enum SearchResultKind {
 /// What happens to a playing video when the app is backgrounded and the user has
 /// not explicitly tapped Picture-in-picture or Background. Backs the Settings
 /// picker and drives `PlayerModel.updateAppForegrounded`.
-enum VideoExitBehavior: String, CaseIterable, Identifiable {
+enum VideoExitBehavior: String, CaseIterable, Identifiable, Hashable {
     case pause, background, pictureInPicture
 
     var id: String { rawValue }

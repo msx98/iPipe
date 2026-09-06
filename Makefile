@@ -130,14 +130,21 @@ build: icon
 	if [ -n "$$(git status --porcelain)" ] || [ ! -d "$(APP_PATH)" ] || [ "$$stored_bid" != "$(BUNDLE_ID)" ]; then \
 		mkdir -p "$$(dirname "$(APP_PATH)")"; \
 		echo "=== Building $(APP_NAME) (Release, unsigned, $(BUNDLE_ID)) ==="; \
+		mkdir -p "$(BUILDDIR)"; \
+		rm -f $(BUILDDIR)/xcodebuild.log; \
 		xcodebuild -project $(XC_PROJECT) -scheme $(APP_NAME) \
 			-configuration Release -derivedDataPath $(DERIVED) \
 			-destination "$(DESTINATION)" \
 			CODE_SIGNING_ALLOWED=NO \
 			DEVELOPMENT_TEAM=$(TEAM_ID) \
 			TEAM_ID=$(TEAM_ID) \
-			PRODUCT_BUNDLE_IDENTIFIER=$(BUNDLE_ID) build > $(BUILDDIR)/xcodebuild.log 2>&1 || { \
-			echo "ERROR: xcodebuild failed. Last 20 lines:"; tail -20 $(BUILDDIR)/xcodebuild.log; exit 1; }; \
+			PRODUCT_BUNDLE_IDENTIFIER=$(BUNDLE_ID) build 2>&1 \
+			| tee $(BUILDDIR)/xcodebuild.log \
+			| grep --line-buffered -Ei 'error:|warning:|fatal error|\*\* (BUILD|TEST|ARCHIVE|CLEAN) (FAILED|INTERRUPTED|SUCCEEDED) \*\*' \
+			|| true; \
+		xc=$${PIPESTATUS[0]}; \
+		echo "--- xcodebuild exit code: $$xc | full log: $(BUILDDIR)/xcodebuild.log ---"; \
+		if [ "$$xc" -ne 0 ]; then echo "ERROR: xcodebuild failed. Last 20 lines:"; tail -20 $(BUILDDIR)/xcodebuild.log; exit $$xc; fi; \
 		echo "xcodebuild OK ($(BUILDDIR)/xcodebuild.log)"; \
 		rm -rf "$(APP_PATH)"; \
 		cp -R "$(DERIVED)/Build/Products/$(PRODUCT_SUBDIR)/$(APP_NAME).app" "$(APP_PATH)"; \

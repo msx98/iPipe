@@ -42,6 +42,17 @@ struct SettingsView: View {
                         Label("Tabs", systemImage: "square.grid.2x2")
                     }
                 }
+                Section(header: Text("When leaving the app"),
+                        footer: Text("Only the default: choices made with the Picture-in-picture or Background buttons always win.")) {
+                    Picker("Playback on exit", selection: Binding<String>(
+                        get: { app.videoExitBehavior.rawValue },
+                        set: { app.setVideoExitBehavior(VideoExitBehavior(rawValue: $0) ?? app.videoExitBehavior) }
+                    )) {
+                        ForEach(VideoExitBehavior.allCases) { behavior in
+                            Text(behavior.title).tag(behavior.rawValue)
+                        }
+                    }
+                }
                 Section("Data") {
                     Button("Clear watch history", role: .destructive) {
                         showClearHistoryConfirm = true
