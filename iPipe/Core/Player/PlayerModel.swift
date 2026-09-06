@@ -46,6 +46,10 @@ final class PlayerModel {
     /// True when the app auto-promoted a normal-output video to `.background`
     /// purely because it was backgrounded (not an explicit user "Background"
     /// toggle), so it can be demoted back to `.normal` on return to foreground.
+    /// True when the app was exited with the "Pause" behavior, so playback stays
+    /// paused on return to the foreground until the user manually resumes (rather
+    /// than the `playWhenForegrounded` intent auto-resuming it).
+    private var wasPausedOnExit = false
     private var wasAutoBackgrounded = false
 
     /// The effective play/pause state: the `AVPlayer` plays exactly when this is

@@ -110,7 +110,7 @@ struct VideoDetailView: View {
                                     .buttonStyle(.plain)
                                     RowMenu {
                                         Button("Open") { app.focusedVideo = related }
-                                        Button("Copy URL", role: .destructive) { copyLink() }
+                                        Button("Copy URL") { copyLink() }
                                     }
                                 }
                             }

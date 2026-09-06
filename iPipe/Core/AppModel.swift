@@ -158,6 +158,11 @@ final class AppModel {
         UserDefaults.standard.set(choice, forKey: Self.schemeKey)
     }
 
+    func setVideoExitBehavior(_ behavior: VideoExitBehavior) {
+        videoExitBehavior = behavior
+        UserDefaults.standard.set(behavior.rawValue, forKey: Self.videoExitBehaviorKey)
+    }
+
     func recordWatch(_ item: StreamItem) {
         history.removeAll { $0.id == item.id }
         history.insert(item, at: 0)
