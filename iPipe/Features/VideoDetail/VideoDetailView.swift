@@ -187,6 +187,8 @@ struct VideoDetailView: View {
                         Image(systemName: "chevron.down")
                     }
                     .font(.footnote.weight(.medium))
+                    .padding(.vertical, 6)
+                    .frame(maxHeight: .infinity)
                 }
                 Spacer()
             }

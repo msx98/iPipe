@@ -65,6 +65,31 @@ enum SearchResultKind {
     case playlists([PlaylistItem])
 }
 
+/// What happens to a playing video when the app is backgrounded and the user has
+/// not explicitly tapped Picture-in-picture or Background. Backs the Settings
+/// picker and drives `PlayerModel.updateAppForegrounded`.
+enum VideoExitBehavior: String, CaseIterable, Identifiable {
+    case pause, background, pictureInPicture
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .pause: return "Pause"
+        case .background: return "Play in background"
+        case .pictureInPicture: return "Picture-in-picture"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .pause: return "Video stops when you leave the app"
+        case .background: return "Audio keeps playing when you leave the app"
+        case .pictureInPicture: return "Floating window appears when you leave the app"
+        }
+    }
+}
+
 enum ExtractionError: LocalizedError {
     case requestFailed(Int)
     case parsingFailed(String)
