@@ -135,10 +135,7 @@ struct SearchView: View {
                     }
                 case .channels(let channels):
                     ForEach(channels) { channel in
-                        NavigationLink(value: channel) {
-                            ChannelRow(channel: channel)
-                        }
-                        .buttonStyle(.plain)
+                        ChannelRow(channel: channel)
                     }
                 case .playlists(let playlists):
                     ForEach(playlists) { playlist in

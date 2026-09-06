@@ -92,27 +92,29 @@ struct VideoDetailView: View {
                         Text("Related").font(.headline)
                         LazyVStack(spacing: 14) {
                             ForEach(model.related) { related in
-                                Button {
-                                    app.focusedVideo = related
-                                } label: {
-                                    HStack(spacing: 10) {
-                                        AsyncThumbnail(url: related.thumbnailURL, videoId: related.id)
-                                            .frame(width: 140)
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(related.title).font(.footnote.weight(.semibold)).lineLimit(2)
-                                            Text(related.author).font(.caption2).foregroundStyle(.secondary)
-                                            Text([related.viewCountText, related.publishedText].compactMap { $0 }.joined(separator: " · "))
-                                                .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
-                                        }
-                                        RowMenu {
-                                            Button("Open") { app.focusedVideo = related }
-                                            Button("Remove from history", role: .destructive) {
-                                                app.history.removeAll { $0.id == related.id }
+                                HStack(spacing: 10) {
+                                    Button {
+                                        app.focusedVideo = related
+                                    } label: {
+                                        HStack(spacing: 10) {
+                                            AsyncThumbnail(url: related.thumbnailURL, videoId: related.id)
+                                                .frame(width: 140)
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(related.title).font(.footnote.weight(.semibold)).lineLimit(2)
+                                                Text(related.author).font(.caption2).foregroundStyle(.secondary)
+                                                Text([related.viewCountText, related.publishedText].compactMap { $0 }.joined(separator: " · "))
+                                                    .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
                                             }
                                         }
                                     }
+                                    .buttonStyle(.plain)
+                                    RowMenu {
+                                        Button("Open") { app.focusedVideo = related }
+                                        Button("Remove from history", role: .destructive) {
+                                            app.history.removeAll { $0.id == related.id }
+                                        }
+                                    }
                                 }
-                                .buttonStyle(.plain)
                             }
                         }
                     }
@@ -287,24 +289,24 @@ struct VideoDetailView: View {
                 .foregroundStyle(.secondary)
             if let authorId = model.stream?.authorId ?? stream.authorId {
                 let author = ChannelItem(id: authorId, name: model.stream?.author ?? stream.author, handle: nil, avatarURL: nil, subscriberText: nil, descriptionText: "", videoCountText: nil)
-                NavigationLink(value: author) {
-                    HStack(spacing: 10) {
-                        ChannelAvatar(name: model.stream?.author ?? stream.author, url: nil, size: 40)
-                        Text(model.stream?.author ?? stream.author)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        RowMenu {
-                            NavigationLink(destination: ChannelView(channel: author)) {
-                                Label("Open", systemImage: "person.2")
-                            }
-                            Button("Unsubscribe", role: .destructive) { app.toggleSubscription(author) }
+                HStack(spacing: 0) {
+                    NavigationLink(value: author) {
+                        HStack(spacing: 10) {
+                            ChannelAvatar(name: model.stream?.author ?? stream.author, url: nil, size: 40)
+                            Text(model.stream?.author ?? stream.author)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                            Spacer()
                         }
                     }
-                    .padding(10)
-                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+                    .buttonStyle(.plain)
+                    RowMenu {
+                        Button("Unsubscribe", role: .destructive) { app.toggleSubscription(author) }
+                    }
                 }
-                .buttonStyle(.plain)
+                .padding(10)
+                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+                .contentShape(Rectangle())
             }
             VStack(spacing: 12) {
                 HStack(spacing: 12) {

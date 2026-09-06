@@ -76,31 +76,33 @@ struct DownloadsView: View {
                 }
             }
         case .done:
-            NavigationLink {
-                LocalPlayerView(item: item)
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: item.kind == .video ? "film.fill" : "music.note")
-                        .font(.title2)
-                        .foregroundStyle(Theme.accent)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(item.title)
-                            .font(.footnote)
-                            .fontWeight(.semibold)
-                            .lineLimit(2)
-                Text("\(item.kind == .video ? "Video" : "Audio") · \(ByteCountFormatter.string(fromByteCount: item.totalBytes, countStyle: .file))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            RowMenu {
-                NavigationLink(destination: LocalPlayerView(item: item)) {
-                    Label("Open", systemImage: "play.rectangle.on.rectangle")
+            HStack(spacing: 12) {
+                NavigationLink {
+                    LocalPlayerView(item: item)
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: item.kind == .video ? "film.fill" : "music.note")
+                            .font(.title2)
+                            .foregroundStyle(Theme.accent)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(item.title)
+                                .font(.footnote)
+                                .fontWeight(.semibold)
+                                .lineLimit(2)
+                            Text("\(item.kind == .video ? "Video" : "Audio") · \(ByteCountFormatter.string(fromByteCount: item.totalBytes, countStyle: .file))")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
                 }
-                Button("Remove download", role: .destructive) { app.downloads.remove(item) }
+                RowMenu {
+                    NavigationLink(destination: LocalPlayerView(item: item)) {
+                        Label("Open", systemImage: "play.rectangle.on.rectangle")
+                    }
+                    Button("Remove download", role: .destructive) { app.downloads.remove(item) }
+                }
             }
-        }
-    }
 }
     }
 }

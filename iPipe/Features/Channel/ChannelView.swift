@@ -47,14 +47,9 @@ struct ChannelView: View {
                         if model.isLoading {
                             ProgressView()
                         } else {
-                            ForEach(model.videos) { video in
-                                Button {
-                                    app.focusedVideo = video
-                                } label: {
-                                    StreamCard(stream: video, showsChannel: false)
-                                }
-                                .buttonStyle(.plain)
-                            }
+                        ForEach(model.videos) { video in
+                            StreamCard(stream: video, showsChannel: false)
+                        }
                         }
                     }
                     .padding(.horizontal)

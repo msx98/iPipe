@@ -97,24 +97,18 @@ struct ClearHistoryConfirmation: ViewModifier {
 /// A stream row that opens the video on tap and shows the "Add to playlist"
 /// dialog on long press.
 struct StreamCell: View {
-    @Environment(AppModel.self) private var app
     let stream: StreamItem
     @State private var showAddToPlaylist = false
 
     var body: some View {
-        Button {
-            app.focusedVideo = stream
-        } label: {
-            StreamCard(stream: stream)
-        }
-        .buttonStyle(.plain)
-        .simultaneousGesture(LongPressGesture(minimumDuration: 0.4).onEnded { _ in
-            showAddToPlaylist = true
-        })
-        .sheet(isPresented: $showAddToPlaylist) {
-            AddToPlaylistSheet(stream: stream)
-        }
-        .accessibilityHint("Long press to add to a playlist")
+        StreamCard(stream: stream)
+            .simultaneousGesture(LongPressGesture(minimumDuration: 0.4).onEnded { _ in
+                showAddToPlaylist = true
+            })
+            .sheet(isPresented: $showAddToPlaylist) {
+                AddToPlaylistSheet(stream: stream)
+            }
+            .accessibilityHint("Long press to add to a playlist")
     }
 }
 
@@ -163,6 +157,8 @@ struct StreamCard: View {
                 }
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture { app.focusedVideo = stream }
     }
 }
 
@@ -172,21 +168,23 @@ struct ChannelRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ChannelAvatar(name: channel.name, url: channel.avatarURL, size: 52)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(channel.name)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
-                Text([channel.handle, channel.subscriberText].compactMap { $0 }.joined(separator: " · "))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            Spacer()
-            RowMenu {
-                NavigationLink(value: channel) {
-                    Label("Open", systemImage: "person.2")
+            NavigationLink(value: channel) {
+                HStack(spacing: 12) {
+                    ChannelAvatar(name: channel.name, url: channel.avatarURL, size: 52)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(channel.name)
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(1)
+                        Text([channel.handle, channel.subscriberText].compactMap { $0 }.joined(separator: " · "))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    Spacer()
                 }
+            }
+            .buttonStyle(.plain)
+            RowMenu {
                 Button("Unsubscribe", role: .destructive) { app.toggleSubscription(channel) }
             }
         }
