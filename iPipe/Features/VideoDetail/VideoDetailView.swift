@@ -301,7 +301,7 @@ struct VideoDetailView: View {
                     }
                     .buttonStyle(.plain)
                     RowMenu {
-                        NavigationLink(value: author) {
+                        NavigationLink(destination: ChannelView(channel: author)) {
                             Label("Visit channel", systemImage: "person.2")
                         }
                         Button("Unsubscribe", role: .destructive) { app.toggleSubscription(author) }
