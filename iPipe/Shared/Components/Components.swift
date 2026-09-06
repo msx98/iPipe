@@ -119,6 +119,7 @@ struct StreamCell: View {
 }
 
 struct StreamCard: View {
+    @Environment(AppModel.self) private var app
     let stream: StreamItem
     var showsChannel = true
 
@@ -154,12 +155,19 @@ struct StreamCard: View {
                         .lineLimit(1)
                 }
                 Spacer(minLength: 0)
+                RowMenu {
+                    Button("Open") { app.focusedVideo = stream }
+                    Button("Remove from history", role: .destructive) {
+                        app.history.removeAll { $0.id == stream.id }
+                    }
+                }
             }
         }
     }
 }
 
 struct ChannelRow: View {
+    @Environment(AppModel.self) private var app
     let channel: ChannelItem
 
     var body: some View {
@@ -175,6 +183,12 @@ struct ChannelRow: View {
                     .lineLimit(1)
             }
             Spacer()
+            RowMenu {
+                NavigationLink(value: channel) {
+                    Label("Open", systemImage: "person.2")
+                }
+                Button("Unsubscribe", role: .destructive) { app.toggleSubscription(channel) }
+            }
         }
         .contentShape(Rectangle())
     }
@@ -354,5 +368,21 @@ struct CopyLinkToast: View {
         .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
         .padding(.bottom, 32)
         .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+}
+
+/// A trailing three-dot (ellipsis) icon button that opens a `Menu`. Used on every
+/// list row so each row exposes the same "Open" / "Delete" context menu; it
+/// replaces the plain chevron that previously only signalled navigation.
+struct RowMenu<Content: View>: View {
+    @ViewBuilder var content: Content
+    var body: some View {
+        Menu { content } label: {
+            Image(systemName: "ellipsis.circle")
+                .font(.title3)
+                .foregroundStyle(.tertiary)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Menu")
     }
 }

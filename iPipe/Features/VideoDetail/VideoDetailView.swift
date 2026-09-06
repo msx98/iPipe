@@ -104,7 +104,12 @@ struct VideoDetailView: View {
                                             Text([related.viewCountText, related.publishedText].compactMap { $0 }.joined(separator: " · "))
                                                 .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
                                         }
-                                        Spacer()
+                                        RowMenu {
+                                            Button("Open") { app.focusedVideo = related }
+                                            Button("Remove from history", role: .destructive) {
+                                                app.history.removeAll { $0.id == related.id }
+                                            }
+                                        }
                                     }
                                 }
                                 .buttonStyle(.plain)
@@ -281,16 +286,20 @@ struct VideoDetailView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             if let authorId = model.stream?.authorId ?? stream.authorId {
-                NavigationLink(value: ChannelItem(id: authorId, name: model.stream?.author ?? stream.author, handle: nil, avatarURL: nil, subscriberText: nil, descriptionText: "", videoCountText: nil)) {
+                let author = ChannelItem(id: authorId, name: model.stream?.author ?? stream.author, handle: nil, avatarURL: nil, subscriberText: nil, descriptionText: "", videoCountText: nil)
+                NavigationLink(value: author) {
                     HStack(spacing: 10) {
                         ChannelAvatar(name: model.stream?.author ?? stream.author, url: nil, size: 40)
                         Text(model.stream?.author ?? stream.author)
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.primary)
                         Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
+                        RowMenu {
+                            NavigationLink(destination: ChannelView(channel: author)) {
+                                Label("Open", systemImage: "person.2")
+                            }
+                            Button("Unsubscribe", role: .destructive) { app.toggleSubscription(author) }
+                        }
                     }
                     .padding(10)
                     .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))

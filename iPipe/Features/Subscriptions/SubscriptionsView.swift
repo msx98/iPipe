@@ -47,15 +47,22 @@ struct HistoryView: View {
                         Button {
                             app.focusedVideo = stream
                         } label: {
-                            HStack(spacing: 12) {
-                                AsyncThumbnail(url: stream.thumbnailURL, videoId: stream.id)
-                                    .frame(width: 130)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(stream.title).font(.subheadline.weight(.semibold)).lineLimit(2)
-                                    Text(stream.author).font(.caption).foregroundStyle(.secondary)
+                                HStack(spacing: 12) {
+                                    AsyncThumbnail(url: stream.thumbnailURL, videoId: stream.id)
+                                        .frame(width: 130)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(stream.title).font(.subheadline.weight(.semibold)).lineLimit(2)
+                                        Text(stream.author).font(.caption).foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    RowMenu {
+                                        Button("Open") { app.focusedVideo = stream }
+                                        Button("Remove from history", role: .destructive) {
+                                            app.history.removeAll { $0.id == stream.id }
+                                        }
+                                    }
                                 }
-                            }
-                            .padding(.vertical, 2)
+                                .padding(.vertical, 2)
                         }
                         .buttonStyle(.plain)
                     }

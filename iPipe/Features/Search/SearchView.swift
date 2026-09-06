@@ -38,6 +38,7 @@ final class SearchModel {
 struct SearchView: View {
     @Environment(AppModel.self) private var app
     @State private var model = SearchModel()
+    @State private var showingRemovePlaylistAlert = false
 
     var body: some View {
         @Bindable var app = app
@@ -80,6 +81,11 @@ struct SearchView: View {
                 }
             }
             .navigationDestination(for: ChannelItem.self) { ChannelView(channel: $0) }
+            .alert("Only your own playlists can be removed", isPresented: $showingRemovePlaylistAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("This playlist was found in your search results. Add it to your playlists before you can remove it.")
+            }
         }
     }
 
@@ -145,6 +151,10 @@ struct SearchView: View {
                                 Text(playlist.videoCountText ?? "").font(.caption).foregroundStyle(.secondary)
                             }
                             Spacer()
+                            RowMenu {
+                                Button("Open", systemImage: "playlist") { app.playlistsPath.append(playlist.id) }
+                                Button("Remove", role: .destructive) { showingRemovePlaylistAlert = true }
+                            }
                         }
                     }
                 }

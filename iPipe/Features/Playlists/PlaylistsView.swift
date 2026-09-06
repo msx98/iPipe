@@ -51,10 +51,11 @@ final class PlaylistsListModel {
 }
 
 /// Small trailing accessory shown on every playlists row: an "×" that removes the
-/// row while editing, or a chevron when idle.
+/// row while editing, or a three-dot context menu (Open / Delete) when idle.
 struct PlaylistRowAccessory: View {
     let isEditing: Bool
     let onDelete: () -> Void
+    var onMenu: () -> Void = {}
 
     var body: some View {
         if isEditing {
@@ -65,9 +66,10 @@ struct PlaylistRowAccessory: View {
             }
             .buttonStyle(.plain)
         } else {
-            Image(systemName: "chevron.right")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(.tertiary)
+            RowMenu {
+                Button("Open", systemImage: "playlist") { onMenu() }
+                Button("Delete", role: .destructive) { onDelete() }
+            }
         }
     }
 }
@@ -89,6 +91,7 @@ struct PlaylistRowCell: View {
     var onTap: (() -> Void)?
     var onRename: (() -> Void)?
     let onDelete: () -> Void
+    var onMenu: () -> Void = {}
 
     var body: some View {
         HStack(spacing: 12) {
@@ -98,7 +101,7 @@ struct PlaylistRowCell: View {
             leading
             Spacer(minLength: 0)
             if !isEditing {
-                PlaylistRowAccessory(isEditing: false, onDelete: onDelete)
+                PlaylistRowAccessory(isEditing: false, onDelete: onDelete, onMenu: onMenu)
             }
         }
         .contentShape(Rectangle())
@@ -270,7 +273,8 @@ struct PlaylistsView: View {
             onDelete: {
                 model.pendingDeletePlaylist = playlist
                 model.deleteConfirmPresented = true
-            }
+            },
+            onMenu: { app.playlistsPath.append(playlist.id) }
         )
         .swipeActions(edge: .trailing) {
             Button(role: .destructive) {

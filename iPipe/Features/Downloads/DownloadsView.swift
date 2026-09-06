@@ -49,6 +49,11 @@ struct DownloadsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                Spacer()
+                RowMenu {
+                    Button("Open", systemImage: "play.rectangle.on.rectangle") { }.disabled(true)
+                    Button("Remove download", role: .destructive) { app.downloads.remove(item) }
+                }
             }
         case .failed:
             HStack(spacing: 12) {
@@ -64,6 +69,11 @@ struct DownloadsView: View {
                         .font(.caption)
                         .foregroundStyle(.red)
                 }
+                Spacer()
+                RowMenu {
+                    Button("Open", systemImage: "play.rectangle.on.rectangle") { }.disabled(true)
+                    Button("Remove download", role: .destructive) { app.downloads.remove(item) }
+                }
             }
         case .done:
             NavigationLink {
@@ -78,13 +88,20 @@ struct DownloadsView: View {
                             .font(.footnote)
                             .fontWeight(.semibold)
                             .lineLimit(2)
-                        Text("\(item.kind == .video ? "Video" : "Audio") · \(ByteCountFormatter.string(fromByteCount: item.totalBytes, countStyle: .file))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                Text("\(item.kind == .video ? "Video" : "Audio") · \(ByteCountFormatter.string(fromByteCount: item.totalBytes, countStyle: .file))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            RowMenu {
+                NavigationLink(destination: LocalPlayerView(item: item)) {
+                    Label("Open", systemImage: "play.rectangle.on.rectangle")
                 }
+                Button("Remove download", role: .destructive) { app.downloads.remove(item) }
             }
         }
+    }
+}
     }
 }
 
