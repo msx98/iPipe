@@ -103,18 +103,25 @@ final class PlayerModel {
     /// backgrounded. Pausing/restoring is delegated to `syncPlayState()`, which
     /// keeps playing while a background or PiP output is active.
     ///
-    /// When the app backgrounds with an active video that the user intends to
-    /// keep playing, we automatically promote the output to `.background` so it
-    /// continues as a backgrounded song (per `playState`) instead of pausing; on
-    /// return to the foreground we demote it back to `.normal`. If the video is
-    /// still expanded when the app backgrounds (`videoOutput == .background`),
-    /// that path applies unchanged: the video collapses into the backgrounded
-    /// song, and no PiP window is ever started (`canStartPictureInPicture
-    /// AutomaticallyFromInline` stays `false`, and `videoOutput` never becomes
-    /// `.pip` here), so exiting the app mid-video behaves exactly like
-    /// collapsing to the miniplayer first and then exiting.
-    func updateAppForegrounded(_ isActive: Bool) {
+    /// `behavior` selects what happens on exit when the video is still in `.normal`
+    /// (i.e. the user has NOT explicitly tapped Picture-in-picture or Background):
+    /// `.background` promotes it to a backgrounded song so audio continues,
+    /// `.pictureInPicture` starts a PiP window, and `.pause` holds playback stopped
+    /// until the user resumes. An already-explicit output is honored unchanged. On
+    /// return, the auto-backgrounded song demotes to `.normal`, a `.pause` exit
+    /// stays paused, and PiP remains a system window until dismissed.
+    func updateAppForegrounded(_ isActive: Bool, behavior: VideoExitBehavior) {
         if isActive {
+            // "Pause" on exit holds playback stopped on re-entry until the user
+            // resumes, instead of the play-when-foregrounded intent resuming it.
+            if wasPausedOnExit {
+                wasPausedOnExit = false
+                appForegrounded = true
+                isPlaying = false
+                updateNowPlaying()
+                syncVideoLayer()
+                return
+            }
             // Mirror of the background branch below: a video that was collapsed
             // into the backgrounded song on exit returns to in-app playback on
             // re-entry.
@@ -126,8 +133,15 @@ final class PlayerModel {
         } else {
             appForegrounded = false
             if hasItem, playWhenForegrounded, videoOutput == .normal {
-                wasAutoBackgrounded = true
-                videoOutput = .background
+                switch behavior {
+                case .pause:
+                    wasPausedOnExit = true
+                case .background:
+                    wasAutoBackgrounded = true
+                    videoOutput = .background
+                case .pictureInPicture:
+                    startPiP()
+                }
             }
         }
         syncPlayState()

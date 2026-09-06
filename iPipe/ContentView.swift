@@ -25,7 +25,7 @@ struct ContentView: View {
             .tint(Theme.accent)
             .onOpenURL { url in app.handleDeepLink(url) }
             .onChange(of: scenePhase) { _, phase in
-                app.player.updateAppForegrounded(phase == .active)
+                app.player.updateAppForegrounded(phase == .active, behavior: app.videoExitBehavior)
             }
 
             if let stream = app.focusedVideo {
