@@ -99,15 +99,21 @@ final class DownloadManager: NSObject {
             remove(existing)
         }
 
-        let audioCandidates = formats.filter { $0.kind == .audioOnly && $0.label.contains("mp4") }
+        // NOTE: `VideoFormat.label` is a human-readable summary (e.g.
+        // "1080p · mp4 · itag 137"), so matching it with `contains("mp4")`
+        // never matched and every download silently aborted before starting.
+        // Select by itag / kind instead, mirroring PlayerModel.defaultFormat.
+        let audioCandidates = formats.filter { $0.kind == .audioOnly && $0.itag == 140 }
         let audioPick: VideoFormat?
-        if let preferred = audioCandidates.first(where: { $0.itag == 140 }) {
+        if let preferred = audioCandidates.first {
             audioPick = preferred
         } else {
             audioPick = formats.first { $0.kind == .audioOnly }
         }
 
-        let videoCandidates = formats.filter { $0.kind == .videoOnly && $0.label.contains("mp4") }
+        // Exclude HLS: an hls manifest URL is an m3u8 playlist, not a
+        // downloadable media file, and must never be treated as muxed.
+        let videoCandidates = formats.filter { $0.kind == .videoOnly && $0.itag != nil }
         let capped = videoCandidates.filter { ($0.height ?? 0) <= 1080 }
         let videoPick: VideoFormat?
         if let best = capped.max(by: { ($0.height ?? 0) < ($1.height ?? 0) }) {
@@ -115,9 +121,12 @@ final class DownloadManager: NSObject {
         } else if let best = videoCandidates.max(by: { ($0.height ?? 0) < ($1.height ?? 0) }) {
             videoPick = best
         } else {
-            let muxed22 = formats.first { $0.kind == .muxed && $0.itag == 22 }
-            let muxed18 = formats.first { $0.kind == .muxed && $0.itag == 18 }
-            videoPick = muxed22 ?? muxed18
+            // No progressive video-only streams: fall back to the best muxed
+            // (≤1080p first, then any muxed). HLS is skipped entirely.
+            let muxed = formats
+                .filter { $0.kind == .muxed && $0.itag != nil }
+                .sorted { ($0.height ?? 0) > ($1.height ?? 0) }
+            videoPick = muxed.first(where: { ($0.height ?? 0) <= 1080 }) ?? muxed.first
         }
 
         var parts: [(part: String, format: VideoFormat)] = []
