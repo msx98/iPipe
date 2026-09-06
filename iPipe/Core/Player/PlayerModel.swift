@@ -182,18 +182,22 @@ final class PlayerModel {
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
-    /// Syncs the inline `AVPlayerLayer`'s player with `videoOutput`. The layer keeps
-    /// its player in `.normal` and in `.pip` — the `AVPictureInPictureController`
-    /// renders from this exact layer, so detaching it would break PiP. It is only
-    /// detached in `.background`, where the video is meant to be audio-only: a
-    /// backgrounded track then has no playable `AVPlayerLayer` for the PiP controller
-    /// to auto-start from, which is what prevents the spurious PiP window on Home.
-    /// The `AVPlayer` keeps playing throughout (audio is driven by the active
-    /// `AVAudioSession`); the layer only controls what is drawn inline.
+    /// Syncs the inline `AVPlayerLayer`'s player with the active output. The layer
+    /// keeps its player only while the video is actually displayed inline — that is
+    /// `.normal` while the app is foregrounded, and always in `.pip` (the
+    /// `AVPictureInPictureController` renders from this exact layer, so detaching it
+    /// would break PiP). In every other case the layer is detached: a `.background`
+    /// track is audio-only, and a `.normal` video while the app is backgrounded (the
+    /// "Pause" exit behavior) must not leave a playable layer behind — that is what
+    /// stops the system from auto-starting a PiP window on Home. The `AVPlayer`
+    /// itself is untouched (audio is driven by the active `AVAudioSession`); the
+    /// layer only controls what is drawn on screen.
     private func syncVideoLayer() {
-        if videoOutput == .normal {
+        let keepsPlayer = videoOutput == .pip
+            || (videoOutput == .normal && appForegrounded)
+        if keepsPlayer {
             playerLayerView.playerLayer.player = player
-        } else if videoOutput == .background, playerLayerView.playerLayer.player != nil {
+        } else if playerLayerView.playerLayer.player != nil {
             playerLayerView.playerLayer.player = nil
         }
     }

@@ -127,7 +127,9 @@ icon: $(ICON_PNG)
 build: icon
 	@set -e; \
 	stored_bid="$$(cat "$(APPROOT)/.bundle_id" 2>/dev/null || true)"; \
-	if [ -n "$$(git status --porcelain)" ] || [ ! -d "$(APP_PATH)" ] || [ "$$stored_bid" != "$(BUNDLE_ID)" ]; then \
+	stored_hash="$$(cat "$(APPROOT)/.app_commit_hash" 2>/dev/null || true)"; \
+	head_hash="$$(git rev-parse HEAD)"; \
+	if [ -n "$$(git status --porcelain)" ] || [ ! -d "$(APP_PATH)" ] || [ "$$stored_bid" != "$(BUNDLE_ID)" ] || [ "$$stored_hash" != "$$head_hash" ]; then \
 		mkdir -p "$$(dirname "$(APP_PATH)")"; \
 		echo "=== Building $(APP_NAME) (Release, unsigned, $(BUNDLE_ID)) ==="; \
 		mkdir -p "$(BUILDDIR)"; \
@@ -149,6 +151,7 @@ build: icon
 		echo "xcodebuild OK ($(BUILDDIR)/xcodebuild.log)"; \
 		rm -rf "$(APP_PATH)"; \
 		cp -R "$(DERIVED)/Build/Products/$(PRODUCT_SUBDIR)/$(APP_NAME).app" "$(APP_PATH)"; \
+		echo "$$head_hash" > "$(APPROOT)/.app_commit_hash"; \
 		echo "$(BUNDLE_ID)" > "$(APPROOT)/.bundle_id"; \
 		git add .; \
 		git diff --cached --quiet || git commit -q -m "build $$(date '+%Y-%m-%d %H:%M:%S')"; \
