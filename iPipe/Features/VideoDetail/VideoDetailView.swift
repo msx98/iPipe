@@ -110,9 +110,7 @@ struct VideoDetailView: View {
                                     .buttonStyle(.plain)
                                     RowMenu {
                                         Button("Open") { app.focusedVideo = related }
-                                        Button("Remove from history", role: .destructive) {
-                                            app.history.removeAll { $0.id == related.id }
-                                        }
+                                        Button("Copy URL", role: .destructive) { copyLink() }
                                     }
                                 }
                             }
