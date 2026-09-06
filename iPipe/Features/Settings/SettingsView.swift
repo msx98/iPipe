@@ -187,13 +187,11 @@ private struct TabsEditorView: View {
                 Text("Restart the app to see changes.")
             }
         }
+        .environment(\.editMode, .constant(.active))
         .navigationTitle("Tabs")
         .toolbar {
-            ToolbarItemGroup(placement: .topBarLeading) {
-                EditButton()
-            }
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Done") {
+                Button("Save") {
                     app.saveTabConfiguration(order: order, hidden: hidden)
                     dismiss()
                 }
