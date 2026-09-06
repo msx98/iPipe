@@ -185,6 +185,9 @@ struct ChannelRow: View {
             }
             .buttonStyle(.plain)
             RowMenu {
+                NavigationLink(value: channel) {
+                    Label("Visit channel", systemImage: "person.2")
+                }
                 Button("Unsubscribe", role: .destructive) { app.toggleSubscription(channel) }
             }
         }
