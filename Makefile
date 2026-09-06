@@ -128,8 +128,8 @@ build: icon
 	@set -e; \
 	stored_bid="$$(cat "$(APPROOT)/.bundle_id" 2>/dev/null || true)"; \
 	stored_hash="$$(cat "$(APPROOT)/.app_commit_hash" 2>/dev/null || true)"; \
-	head_hash="$$(git rev-parse HEAD)"; \
-	if [ -n "$$(git status --porcelain)" ] || [ ! -d "$(APP_PATH)" ] || [ "$$stored_bid" != "$(BUNDLE_ID)" ] || [ "$$stored_hash" != "$$head_hash" ]; then \
+	parent_hash="$$(git rev-parse HEAD 2>/dev/null)"; \
+	if [ -n "$$(git status --porcelain)" ] || [ ! -d "$(APP_PATH)" ] || [ "$$stored_bid" != "$(BUNDLE_ID)" ] || [ "$$stored_hash" != "$$parent_hash" ]; then \
 		mkdir -p "$$(dirname "$(APP_PATH)")"; \
 		echo "=== Building $(APP_NAME) (Release, unsigned, $(BUNDLE_ID)) ==="; \
 		mkdir -p "$(BUILDDIR)"; \
@@ -141,7 +141,7 @@ build: icon
 			DEVELOPMENT_TEAM=$(TEAM_ID) \
 			TEAM_ID=$(TEAM_ID) \
 			PRODUCT_BUNDLE_IDENTIFIER=$(BUNDLE_ID) build 2>&1 \
-| tee $(BUILDDIR)/xcodebuild.log \
+		| tee $(BUILDDIR)/xcodebuild.log \
 		| grep -v --line-buffered '\.pcm' \
 		| grep --line-buffered -Ei 'error:|warning:|fatal error|\*\* (BUILD|TEST|ARCHIVE|CLEAN) (FAILED|INTERRUPTED|SUCCEEDED) \*\*' \
 			|| true; \
@@ -151,12 +151,13 @@ build: icon
 		echo "xcodebuild OK ($(BUILDDIR)/xcodebuild.log)"; \
 		rm -rf "$(APP_PATH)"; \
 		cp -R "$(DERIVED)/Build/Products/$(PRODUCT_SUBDIR)/$(APP_NAME).app" "$(APP_PATH)"; \
-		plutil -replace IPipeCommitHash -string "$$head_hash" "$(APP_PATH)/Info.plist" 2>/dev/null \
-		  || plutil -insert IPipeCommitHash -string "$$head_hash" "$(APP_PATH)/Info.plist"; \
-		echo "$$head_hash" > "$(APPROOT)/.app_commit_hash"; \
 		echo "$(BUNDLE_ID)" > "$(APPROOT)/.bundle_id"; \
 		git add .; \
 		git diff --cached --quiet || git commit -q -m "build $$(date '+%Y-%m-%d %H:%M:%S')"; \
+		new_hash="$$(git rev-parse HEAD)"; \
+		plutil -replace IPipeCommitHash -string "$$new_hash" "$(APP_PATH)/Info.plist" 2>/dev/null \
+		  || plutil -insert IPipeCommitHash -string "$$new_hash" "$(APP_PATH)/Info.plist"; \
+		echo "$$new_hash" > "$(APPROOT)/.app_commit_hash"; \
 	else \
 		echo "=== Tree clean; reusing $(APP_PATH) ==="; \
 	fi
