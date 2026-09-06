@@ -44,6 +44,7 @@ final class AppModel {
     var subscriptions: [ChannelItem]
     var history: [StreamItem]
     private(set) var colorSchemeChoice: String
+    var videoExitBehavior: VideoExitBehavior = .background
 
     /// Persisted tab layout. Loaded as a snapshot at init and consumed by
     /// ContentView; changes made in Settings only take effect after relaunch.
@@ -54,6 +55,7 @@ final class AppModel {
     private static let historyKey = "np.history"
     private static let backendKey = "np.backend"
     private static let schemeKey = "np.colorScheme"
+    private static let videoExitBehaviorKey = "np.videoExitBehavior"
     private static let tabOrderKey = "np.tabOrder"
     private static let hiddenTabsKey = "np.hiddenTabs"
     private static let defaultTabOrder: [RootTab] = [.trending, .search, .subscriptions, .playlists, .settings]
