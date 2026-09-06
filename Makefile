@@ -139,8 +139,9 @@ build: icon
 			DEVELOPMENT_TEAM=$(TEAM_ID) \
 			TEAM_ID=$(TEAM_ID) \
 			PRODUCT_BUNDLE_IDENTIFIER=$(BUNDLE_ID) build 2>&1 \
-			| tee $(BUILDDIR)/xcodebuild.log \
-			| grep --line-buffered -Ei 'error:|warning:|fatal error|\*\* (BUILD|TEST|ARCHIVE|CLEAN) (FAILED|INTERRUPTED|SUCCEEDED) \*\*' \
+| tee $(BUILDDIR)/xcodebuild.log \
+		| grep -v --line-buffered '\.pcm' \
+		| grep --line-buffered -Ei 'error:|warning:|fatal error|\*\* (BUILD|TEST|ARCHIVE|CLEAN) (FAILED|INTERRUPTED|SUCCEEDED) \*\*' \
 			|| true; \
 		xc=$${PIPESTATUS[0]}; \
 		echo "--- xcodebuild exit code: $$xc | full log: $(BUILDDIR)/xcodebuild.log ---"; \
