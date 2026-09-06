@@ -151,6 +151,7 @@ final class PlayerModel {
             isPlaying = false
         }
         updateNowPlaying()
+        syncVideoLayer()
     }
 
     private func activateBackgroundAudio() {
@@ -161,6 +162,22 @@ final class PlayerModel {
 
     private func deactivateBackgroundAudio() {
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
+    /// Keeps the inline `AVPlayerLayer`'s player in sync with `videoOutput`. The
+    /// inline surface is only shown in `.normal`; in `.background` and `.pip` the
+    /// video is hidden, so the layer is detached. Detaching in `.background` is
+    /// also what prevents an automatic PiP window on backgrounding: the PiP
+    /// controller can only start from a *playable* `AVPlayerLayer`, and a video
+    /// that's meant to be an audio-only background track has no such layer. The
+    /// `AVPlayer` keeps playing (audio is driven by the active `AVAudioSession`),
+    /// so playback is unaffected — the layer only controls what's drawn on screen.
+    private func syncVideoLayer() {
+        if videoOutput == .normal {
+            playerLayerView.playerLayer.player = player
+        } else if playerLayerView.playerLayer.player != nil {
+            playerLayerView.playerLayer.player = nil
+        }
     }
 
     init() {

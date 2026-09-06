@@ -40,6 +40,7 @@ struct VideoDetailView: View {
     @State private var showDescription = false
     @State private var showAddToPlaylist = false
     @State private var isFullscreen = false
+    @State private var linkCopied = false
     @State private var showControls = true
     @State private var controlsTask: Task<Void, Never>?
 
@@ -71,6 +72,11 @@ struct VideoDetailView: View {
         }
         .onChange(of: isFullscreen) { _, isFullscreen in
             setOrientation(isFullscreen ? .landscapeRight : .portrait)
+        }
+        .overlay(alignment: .bottom) {
+            if linkCopied {
+                CopyLinkToast()
+            }
         }
     }
 
@@ -253,6 +259,20 @@ struct VideoDetailView: View {
         }
     }
 
+    /// Copies the canonical YouTube watch URL for the currently shown video to the
+    /// clipboard and surfaces a transient "Link copied" toast.
+    private func copyLink() {
+        let target = model.stream ?? stream
+        guard let url = target.watchURL else { return }
+        UIPasteboard.general.string = url.absoluteString
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { linkCopied = true }
+        Task {
+            try? await Task.sleep(nanoseconds: 1_600_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: 0.3)) { linkCopied = false }
+        }
+    }
+
     private var metadataSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(model.stream?.title ?? stream.title)
@@ -318,6 +338,17 @@ struct VideoDetailView: View {
                             .padding(.vertical, 10)
                             .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
                     }
+                    Button {
+                        copyLink()
+                    } label: {
+                        Label("Copy link", systemImage: "link")
+                            .font(.footnote.weight(.medium))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Copy video link")
                 }
             }
             if let description = model.stream?.description, !description.isEmpty {

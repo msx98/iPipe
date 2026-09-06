@@ -334,3 +334,25 @@ struct MiniPlayerBar: View {
         )
     }
 }
+
+/// Transient confirmation shown at the bottom of the video detail screen after a
+/// "Copy link" action: a dark pill with a green checkmark, animating in and out.
+/// Shared by the video detail screen and list cells so both give the same
+/// feedback when a link is copied to the clipboard.
+struct CopyLinkToast: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+            Text("Link copied")
+                .font(.footnote.weight(.medium))
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
+        .background(Color(.init(white: 0.16, alpha: 1.0)), in: RoundedRectangle(cornerRadius: 24))
+        .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+        .padding(.bottom, 32)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+}
