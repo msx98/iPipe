@@ -164,18 +164,18 @@ final class PlayerModel {
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
-    /// Keeps the inline `AVPlayerLayer`'s player in sync with `videoOutput`. The
-    /// inline surface is only shown in `.normal`; in `.background` and `.pip` the
-    /// video is hidden, so the layer is detached. Detaching in `.background` is
-    /// also what prevents an automatic PiP window on backgrounding: the PiP
-    /// controller can only start from a *playable* `AVPlayerLayer`, and a video
-    /// that's meant to be an audio-only background track has no such layer. The
-    /// `AVPlayer` keeps playing (audio is driven by the active `AVAudioSession`),
-    /// so playback is unaffected — the layer only controls what's drawn on screen.
+    /// Syncs the inline `AVPlayerLayer`'s player with `videoOutput`. The layer keeps
+    /// its player in `.normal` and in `.pip` — the `AVPictureInPictureController`
+    /// renders from this exact layer, so detaching it would break PiP. It is only
+    /// detached in `.background`, where the video is meant to be audio-only: a
+    /// backgrounded track then has no playable `AVPlayerLayer` for the PiP controller
+    /// to auto-start from, which is what prevents the spurious PiP window on Home.
+    /// The `AVPlayer` keeps playing throughout (audio is driven by the active
+    /// `AVAudioSession`); the layer only controls what is drawn inline.
     private func syncVideoLayer() {
         if videoOutput == .normal {
             playerLayerView.playerLayer.player = player
-        } else if playerLayerView.playerLayer.player != nil {
+        } else if videoOutput == .background, playerLayerView.playerLayer.player != nil {
             playerLayerView.playerLayer.player = nil
         }
     }
